@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:recalie/data/local/app_database.dart';
 import 'package:recalie/data/local/local_repository.dart';
+import 'package:recalie/features/discover/catalog_api.dart';
 import 'package:recalie/features/discover/discover_subjects.dart';
 import 'package:recalie/features/photo_groups/photo_groups.dart';
 import 'package:recalie/features/settings/settings_page.dart';
@@ -17,10 +18,12 @@ class RecalieApp extends StatefulWidget {
     super.key,
     required this.database,
     this.showPictureGroups = true,
+    this.catalogApiClient = const CatalogApiClient(),
   });
 
   final AppDatabase database;
   final bool showPictureGroups;
+  final CatalogApiClient catalogApiClient;
 
   @override
   State<RecalieApp> createState() => _RecalieAppState();
@@ -66,6 +69,7 @@ class _RecalieAppState extends State<RecalieApp> {
         themeMode: _themeMode,
         onThemeChanged: _setTheme,
         showPictureGroups: widget.showPictureGroups,
+        catalogApiClient: widget.catalogApiClient,
       ),
     );
   }
@@ -98,12 +102,14 @@ class RecalieShell extends StatefulWidget {
     required this.themeMode,
     required this.onThemeChanged,
     required this.showPictureGroups,
+    required this.catalogApiClient,
   });
 
   final LocalRepository localRepository;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final bool showPictureGroups;
+  final CatalogApiClient catalogApiClient;
 
   @override
   State<RecalieShell> createState() => _RecalieShellState();
@@ -151,7 +157,10 @@ class _RecalieShellState extends State<RecalieShell> {
         description: 'Find subjects and build memory sets around them.',
         themeMode: widget.themeMode,
         onThemeChanged: widget.onThemeChanged,
-        lowerContent: const DiscoverSubjects(),
+        lowerContent: DiscoverSubjects(
+          repository: widget.localRepository,
+          apiClient: widget.catalogApiClient,
+        ),
       ),
       RecaliePage(
         title: 'AI Coach',

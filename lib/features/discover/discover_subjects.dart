@@ -1,70 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:recalie/data/local/local_repository.dart';
+import 'package:recalie/features/discover/catalog_api.dart';
+import 'package:recalie/features/discover/subject_learning_pages.dart';
 
-class DiscoverSubjects extends StatelessWidget {
-  const DiscoverSubjects({super.key});
+class DiscoverSubjects extends StatefulWidget {
+  const DiscoverSubjects({
+    super.key,
+    required this.repository,
+    this.apiClient = const CatalogApiClient(),
+  });
 
-  static const _subjects = <_DiscoverSubject>[
-    _DiscoverSubject(
-      name: 'English',
-      subtitle: 'Words, grammar, and literature',
-      icon: Icons.translate_rounded,
-      colors: [Color(0xFF2563EB), Color(0xFF60A5FA)],
-    ),
-    _DiscoverSubject(
-      name: 'Mathematics',
-      subtitle: 'Formulas, rules, and methods',
-      icon: Icons.calculate_rounded,
-      colors: [Color(0xFF7C3AED), Color(0xFFA78BFA)],
-    ),
-    _DiscoverSubject(
-      name: 'Physics',
-      subtitle: 'Laws, units, and equations',
-      icon: Icons.bolt_rounded,
-      colors: [Color(0xFF0F766E), Color(0xFF2DD4BF)],
-    ),
-    _DiscoverSubject(
-      name: 'Chemistry',
-      subtitle: 'Elements, reactions, and structures',
-      icon: Icons.science_rounded,
-      colors: [Color(0xFFDB2777), Color(0xFFF472B6)],
-    ),
-    _DiscoverSubject(
-      name: 'Biology',
-      subtitle: 'Life, anatomy, and ecosystems',
-      icon: Icons.biotech_rounded,
-      colors: [Color(0xFF15803D), Color(0xFF4ADE80)],
-    ),
-    _DiscoverSubject(
-      name: 'History',
-      subtitle: 'Dates, people, and events',
-      icon: Icons.account_balance_rounded,
-      colors: [Color(0xFFB45309), Color(0xFFFBBF24)],
-    ),
-    _DiscoverSubject(
-      name: 'Geography',
-      subtitle: 'Places, maps, and environments',
-      icon: Icons.public_rounded,
-      colors: [Color(0xFF0369A1), Color(0xFF38BDF8)],
-    ),
-    _DiscoverSubject(
-      name: 'Computer science',
-      subtitle: 'Concepts, syntax, and systems',
-      icon: Icons.code_rounded,
-      colors: [Color(0xFF334155), Color(0xFF64748B)],
-    ),
-    _DiscoverSubject(
-      name: 'Medicine',
-      subtitle: 'Terms, systems, and treatments',
-      icon: Icons.medical_services_rounded,
-      colors: [Color(0xFFDC2626), Color(0xFFFB7185)],
-    ),
-    _DiscoverSubject(
-      name: 'Law',
-      subtitle: 'Cases, principles, and terminology',
-      icon: Icons.gavel_rounded,
-      colors: [Color(0xFF4338CA), Color(0xFF818CF8)],
-    ),
-  ];
+  final LocalRepository repository;
+  final CatalogApiClient apiClient;
+
+  @override
+  State<DiscoverSubjects> createState() => _DiscoverSubjectsState();
+}
+
+class _DiscoverSubjectsState extends State<DiscoverSubjects> {
+  late Future<List<CatalogSubject>> _subjects;
+
+  @override
+  void initState() {
+    super.initState();
+    _subjects = widget.apiClient.fetchSubjects();
+  }
+
+  void _retry() {
+    setState(() => _subjects = widget.apiClient.fetchSubjects());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,34 +44,101 @@ class DiscoverSubjects extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'Explore ideas for information you may want to remember.',
+          'Explore server-hosted review blocks and add the ones you want to remember.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 14),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.78,
-          ),
-          itemCount: _subjects.length,
-          itemBuilder: (context, index) =>
-              _SubjectCard(subject: _subjects[index]),
+        FutureBuilder<List<CatalogSubject>>(
+          future: _subjects,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError) {
+              return _CatalogError(onRetry: _retry);
+            }
+            final subjects = snapshot.data ?? const <CatalogSubject>[];
+            if (subjects.isEmpty) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: Text('No subjects are published yet.')),
+              );
+            }
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.78,
+              ),
+              itemCount: subjects.length,
+              itemBuilder: (context, index) => _SubjectCard(
+                subject: subjects[index],
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SubjectOverviewPage(
+                      subject: subjects[index],
+                      apiClient: widget.apiClient,
+                      repository: widget.repository,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
   }
 }
 
-class _SubjectCard extends StatelessWidget {
-  const _SubjectCard({required this.subject});
+class _CatalogError extends StatelessWidget {
+  const _CatalogError({required this.onRetry});
 
-  final _DiscoverSubject subject;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          children: [
+            Icon(
+              Icons.cloud_off_rounded,
+              size: 42,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Could not reach the Recalie catalog server.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Try again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubjectCard extends StatelessWidget {
+  const _SubjectCard({required this.subject, required this.onTap});
+
+  final CatalogSubject subject;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -115,46 +146,76 @@ class _SubjectCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: _SubjectCover(subject: subject)),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(13, 11, 13, 13),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  subject.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: SubjectCover(subject: subject)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(13, 11, 13, 13),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    subject.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subject.subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    height: 1.25,
+                  const SizedBox(height: 3),
+                  Text(
+                    subject.subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      height: 1.25,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SubjectCover extends StatelessWidget {
-  const _SubjectCover({required this.subject});
+class SubjectCover extends StatelessWidget {
+  const SubjectCover({super.key, required this.subject});
 
-  final _DiscoverSubject subject;
+  final CatalogSubject subject;
+
+  @override
+  Widget build(BuildContext context) {
+    final start = colorFromHex(subject.colorStart, const Color(0xFF2563EB));
+    final end = colorFromHex(subject.colorEnd, const Color(0xFF60A5FA));
+    if (subject.coverImageUrl.isNotEmpty) {
+      return Image.network(
+        subject.coverImageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) =>
+            _GradientSubjectCover(subject: subject, start: start, end: end),
+      );
+    }
+    return _GradientSubjectCover(subject: subject, start: start, end: end);
+  }
+}
+
+class _GradientSubjectCover extends StatelessWidget {
+  const _GradientSubjectCover({
+    required this.subject,
+    required this.start,
+    required this.end,
+  });
+
+  final CatalogSubject subject;
+  final Color start;
+  final Color end;
 
   @override
   Widget build(BuildContext context) {
@@ -166,67 +227,48 @@ class _SubjectCover extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: subject.colors,
+            colors: [start, end],
           ),
         ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Positioned(
-              right: -20,
-              top: -24,
-              child: Container(
-                width: 105,
-                height: 105,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.13),
-                ),
-              ),
+        child: Center(
+          child: Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: Colors.white.withValues(alpha: 0.18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
             ),
-            Positioned(
-              left: -22,
-              bottom: -35,
-              child: Container(
-                width: 115,
-                height: 115,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.10),
-                ),
-              ),
+            child: Icon(
+              iconForCatalogName(subject.icon),
+              size: 42,
+              color: Colors.white,
             ),
-            Center(
-              child: Container(
-                width: 76,
-                height: 76,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  color: Colors.white.withValues(alpha: 0.18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.28),
-                  ),
-                ),
-                child: Icon(subject.icon, size: 42, color: Colors.white),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _DiscoverSubject {
-  const _DiscoverSubject({
-    required this.name,
-    required this.subtitle,
-    required this.icon,
-    required this.colors,
-  });
-
-  final String name;
-  final String subtitle;
-  final IconData icon;
-  final List<Color> colors;
+Color colorFromHex(String value, Color fallback) {
+  final hex = value.replaceFirst('#', '');
+  final parsed = int.tryParse(hex, radix: 16);
+  return parsed == null || hex.length != 6
+      ? fallback
+      : Color(0xFF000000 | parsed);
 }
+
+IconData iconForCatalogName(String value) => switch (value) {
+  'translate' => Icons.translate_rounded,
+  'calculate' => Icons.calculate_rounded,
+  'bolt' => Icons.bolt_rounded,
+  'science' => Icons.science_rounded,
+  'biotech' => Icons.biotech_rounded,
+  'account_balance' => Icons.account_balance_rounded,
+  'public' => Icons.public_rounded,
+  'code' => Icons.code_rounded,
+  'medical_services' => Icons.medical_services_rounded,
+  'gavel' => Icons.gavel_rounded,
+  _ => Icons.menu_book_rounded,
+};
