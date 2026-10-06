@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 const _configuredApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:8000/api/v1',
+  defaultValue: 'http://169.58.165.98:8001/api/v1',
 );
 
 class CatalogApiClient {

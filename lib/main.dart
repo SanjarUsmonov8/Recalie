@@ -44,16 +44,21 @@ class _RecalieAppState extends State<RecalieApp> {
     final savedTheme = await _localRepository.readPreference('theme_mode');
     if (!mounted || savedTheme == null) return;
     setState(() {
-      _themeMode = savedTheme == 'dark' ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = switch (savedTheme) {
+        'dark' => ThemeMode.dark,
+        'system' => ThemeMode.system,
+        _ => ThemeMode.light,
+      };
     });
   }
 
   Future<void> _setTheme(ThemeMode themeMode) async {
     setState(() => _themeMode = themeMode);
-    await _localRepository.savePreference(
-      'theme_mode',
-      themeMode == ThemeMode.dark ? 'dark' : 'light',
-    );
+    await _localRepository.savePreference('theme_mode', switch (themeMode) {
+      ThemeMode.dark => 'dark',
+      ThemeMode.system => 'system',
+      ThemeMode.light => 'light',
+    });
   }
 
   @override
@@ -160,6 +165,10 @@ class _RecalieShellState extends State<RecalieShell> {
         lowerContent: DiscoverSubjects(
           repository: widget.localRepository,
           apiClient: widget.catalogApiClient,
+          onViewHome: () {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+            _selectTab(0);
+          },
         ),
       ),
       RecaliePage(
@@ -172,12 +181,23 @@ class _RecalieShellState extends State<RecalieShell> {
 
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(index: _selectedIndex, children: pages),
-      bottomNavigationBar: RecalieNavigationBar(
-        currentIndex: _selectedIndex,
-        onChanged: _selectTab,
-        onAddPressed: () =>
-            showAddPictureGroupSheet(context, widget.localRepository),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: IndexedStack(index: _selectedIndex, children: pages),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: RecalieNavigationBar(
+              currentIndex: _selectedIndex,
+              onChanged: _selectTab,
+              onAddPressed: () =>
+                  showAddPictureGroupSheet(context, widget.localRepository),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -360,67 +380,51 @@ class RecalieNavigationBar extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: Container(
-                  key: const Key('recalieNavigationBar'),
-                  height: 66,
-                  padding: const EdgeInsets.all(7),
-                  decoration: _navigationDecoration(isDark),
-                  child: Row(
-                    children: [
-                      _NavigationItem(
-                        key: const Key('recalieNavHome'),
-                        label: 'Home',
-                        icon: Icons.home_rounded,
-                        isSelected: currentIndex == 0,
-                        colors: colors,
-                        onTap: () => onChanged(0),
-                      ),
-                      _NavigationItem(
-                        key: const Key('recalieNavDiscover'),
-                        label: 'Discover',
-                        icon: Icons.explore_rounded,
-                        isSelected: currentIndex == 1,
-                        colors: colors,
-                        onTap: () => onChanged(1),
-                      ),
-                      _NavigationItem(
-                        key: const Key('recalieNavAi'),
-                        label: 'AI',
-                        icon: Icons.auto_awesome_rounded,
-                        isSelected: currentIndex == 2,
-                        colors: colors,
-                        onTap: () => onChanged(2),
-                      ),
-                    ],
+            child: Container(
+              key: const Key('recalieNavigationBar'),
+              height: 66,
+              padding: const EdgeInsets.all(7),
+              decoration: _navigationDecoration(isDark),
+              child: Row(
+                children: [
+                  _NavigationItem(
+                    key: const Key('recalieNavHome'),
+                    label: 'Home',
+                    icon: Icons.home_rounded,
+                    isSelected: currentIndex == 0,
+                    colors: colors,
+                    onTap: () => onChanged(0),
                   ),
-                ),
+                  _NavigationItem(
+                    key: const Key('recalieNavDiscover'),
+                    label: 'Discover',
+                    icon: Icons.explore_rounded,
+                    isSelected: currentIndex == 1,
+                    colors: colors,
+                    onTap: () => onChanged(1),
+                  ),
+                  _NavigationItem(
+                    key: const Key('recalieNavAi'),
+                    label: 'AI',
+                    icon: Icons.auto_awesome_rounded,
+                    isSelected: currentIndex == 2,
+                    colors: colors,
+                    onTap: () => onChanged(2),
+                  ),
+                ],
               ),
             ),
           ),
           const SizedBox(width: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-              child: Container(
-                key: const Key('recalieAddButton'),
-                width: 66,
-                height: 66,
-                decoration: _navigationDecoration(isDark),
-                child: IconButton(
-                  tooltip: 'Add memory set',
-                  onPressed: onAddPressed,
-                  icon: Icon(
-                    Icons.add_rounded,
-                    color: colors.primary,
-                    size: 28,
-                  ),
-                ),
-              ),
+          Container(
+            key: const Key('recalieAddButton'),
+            width: 66,
+            height: 66,
+            decoration: _navigationDecoration(isDark),
+            child: IconButton(
+              tooltip: 'Add memory set',
+              onPressed: onAddPressed,
+              icon: Icon(Icons.add_rounded, color: colors.primary, size: 28),
             ),
           ),
         ],
@@ -430,9 +434,7 @@ class RecalieNavigationBar extends StatelessWidget {
 
   BoxDecoration _navigationDecoration(bool isDark) {
     return BoxDecoration(
-      color: (isDark ? const Color(0xFF172033) : Colors.white).withValues(
-        alpha: isDark ? 0.82 : 0.76,
-      ),
+      color: isDark ? const Color(0xFF172033) : Colors.white,
       borderRadius: BorderRadius.circular(30),
       boxShadow: [
         BoxShadow(
@@ -471,20 +473,30 @@ class _NavigationItem extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(23),
           onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(23),
-              color: isSelected
-                  ? colors.primary.withValues(alpha: 0.17)
-                  : Colors.transparent,
-            ),
-            child: Icon(
-              icon,
-              color: isSelected ? colors.primary : colors.onSurfaceVariant,
-              size: 25,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(23),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (isSelected)
+                  BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      color: colors.primary.withValues(alpha: 0.17),
+                    ),
+                  ),
+                Center(
+                  child: Icon(
+                    icon,
+                    color: isSelected
+                        ? colors.primary
+                        : colors.onSurfaceVariant,
+                    size: 25,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

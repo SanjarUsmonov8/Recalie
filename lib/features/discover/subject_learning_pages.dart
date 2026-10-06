@@ -12,11 +12,13 @@ class SubjectOverviewPage extends StatefulWidget {
     required this.subject,
     required this.apiClient,
     required this.repository,
+    required this.onViewHome,
   });
 
   final CatalogSubject subject;
   final CatalogApiClient apiClient;
   final LocalRepository repository;
+  final VoidCallback onViewHome;
 
   @override
   State<SubjectOverviewPage> createState() => _SubjectOverviewPageState();
@@ -92,6 +94,7 @@ class _SubjectOverviewPageState extends State<SubjectOverviewPage> {
                           subject: subject,
                           part: subject.parts[index],
                           repository: widget.repository,
+                          onViewHome: widget.onViewHome,
                         ),
                       ),
                     ),
@@ -114,11 +117,13 @@ class SubjectPartPage extends StatelessWidget {
     required this.subject,
     required this.part,
     required this.repository,
+    required this.onViewHome,
   });
 
   final CatalogSubject subject;
   final CatalogSubjectPart part;
   final LocalRepository repository;
+  final VoidCallback onViewHome;
 
   @override
   Widget build(BuildContext context) {
@@ -168,6 +173,13 @@ class SubjectPartPage extends StatelessWidget {
                 number: index + 1,
                 block: part.reviewBlocks[index],
                 accent: accent,
+                onInfo: () => _showReviewInfo(
+                  context,
+                  subjectName: subject.name,
+                  partTitle: part.title,
+                  block: part.reviewBlocks[index],
+                  accent: accent,
+                ),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => ReviewBlockPage(
@@ -175,6 +187,7 @@ class SubjectPartPage extends StatelessWidget {
                       part: part,
                       block: part.reviewBlocks[index],
                       repository: repository,
+                      onViewHome: onViewHome,
                     ),
                   ),
                 ),
@@ -196,12 +209,14 @@ class ReviewBlockPage extends StatefulWidget {
     required this.part,
     required this.block,
     required this.repository,
+    required this.onViewHome,
   });
 
   final CatalogSubject subject;
   final CatalogSubjectPart part;
   final CatalogReviewBlock block;
   final LocalRepository repository;
+  final VoidCallback onViewHome;
 
   @override
   State<ReviewBlockPage> createState() => _ReviewBlockPageState();
@@ -225,11 +240,18 @@ class _ReviewBlockPageState extends State<ReviewBlockPage> {
         ),
         planType: selection.type.storageValue,
         planStartDate: selection.startDate,
+        coverIcon: widget.subject.icon,
+        coverColorStart: widget.subject.colorStart,
+        coverColorEnd: widget.subject.colorEnd,
+        coverImageUrl: widget.subject.coverImageUrl,
       );
       if (!mounted) return;
       setState(() => _added = true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Review block added to Home.')),
+        SnackBar(
+          content: const Text('Added to Home.'),
+          action: SnackBarAction(label: 'VIEW', onPressed: widget.onViewHome),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -247,7 +269,21 @@ class _ReviewBlockPageState extends State<ReviewBlockPage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 10, 18, 38),
           children: [
-            _PageHeader(title: widget.block.title),
+            _PageHeader(
+              title: widget.block.title,
+              trailing: OutlinedButton.icon(
+                key: const Key('reviewBlockViewInfo'),
+                onPressed: () => _showReviewInfo(
+                  context,
+                  subjectName: widget.subject.name,
+                  partTitle: widget.part.title,
+                  block: widget.block,
+                  accent: accent,
+                ),
+                icon: const Icon(Icons.info_outline_rounded, size: 18),
+                label: const Text('View info'),
+              ),
+            ),
             const SizedBox(height: 16),
             Wrap(
               spacing: 8,
@@ -316,9 +352,10 @@ class _ReviewBlockPageState extends State<ReviewBlockPage> {
 }
 
 class _PageHeader extends StatelessWidget {
-  const _PageHeader({required this.title});
+  const _PageHeader({required this.title, this.trailing});
 
   final String title;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -340,6 +377,7 @@ class _PageHeader extends StatelessWidget {
             ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
+        if (trailing != null) ...[const SizedBox(width: 8), trailing!],
       ],
     );
   }
@@ -408,12 +446,14 @@ class _ReviewBlockCard extends StatelessWidget {
     required this.number,
     required this.block,
     required this.accent,
+    required this.onInfo,
     required this.onTap,
   });
 
   final int number;
   final CatalogReviewBlock block;
   final Color accent;
+  final VoidCallback onInfo;
   final VoidCallback onTap;
 
   @override
@@ -438,6 +478,12 @@ class _ReviewBlockCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  IconButton(
+                    tooltip: 'View info',
+                    onPressed: onInfo,
+                    icon: const Icon(Icons.info_outline_rounded),
+                    visualDensity: VisualDensity.compact,
+                  ),
                   const Icon(Icons.schedule_rounded, size: 17),
                   const SizedBox(width: 4),
                   Text('${block.estimatedMinutes} min'),
@@ -458,6 +504,93 @@ class _ReviewBlockCard extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _showReviewInfo(
+  BuildContext context, {
+  required String subjectName,
+  required String partTitle,
+  required CatalogReviewBlock block,
+  required Color accent,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      top: false,
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.82,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 2, 14, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Review information',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '$subjectName · $partTitle',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+                children: [
+                  _ContentCard(
+                    title: block.title,
+                    child: Text(
+                      block.summary,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyLarge?.copyWith(height: 1.5),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _BulletCard(
+                    title: 'Key ideas and formulas',
+                    values: block.keyPoints,
+                    accent: accent,
+                  ),
+                  const SizedBox(height: 12),
+                  _BulletCard(
+                    title: 'Questions to recall',
+                    values: block.recallPrompts,
+                    accent: accent,
+                    numbered: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _InfoPill extends StatelessWidget {

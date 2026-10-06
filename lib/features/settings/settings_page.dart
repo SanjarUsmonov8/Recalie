@@ -77,6 +77,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     Divider(color: colors.outlineVariant),
                     _ThemeOption(
+                      key: const Key('systemThemeOption'),
+                      title: 'System',
+                      description: 'Follow your device appearance.',
+                      icon: Icons.brightness_auto_rounded,
+                      selected: _themeMode == ThemeMode.system,
+                      onTap: () => _selectTheme(ThemeMode.system),
+                    ),
+                    Divider(color: colors.outlineVariant),
+                    _ThemeOption(
                       key: const Key('darkThemeOption'),
                       title: 'Dark',
                       description: 'Use the deeper blue appearance.',

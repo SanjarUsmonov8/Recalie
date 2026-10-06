@@ -8,10 +8,12 @@ class DiscoverSubjects extends StatefulWidget {
     super.key,
     required this.repository,
     this.apiClient = const CatalogApiClient(),
+    required this.onViewHome,
   });
 
   final LocalRepository repository;
   final CatalogApiClient apiClient;
+  final VoidCallback onViewHome;
 
   @override
   State<DiscoverSubjects> createState() => _DiscoverSubjectsState();
@@ -87,6 +89,7 @@ class _DiscoverSubjectsState extends State<DiscoverSubjects> {
                       subject: subjects[index],
                       apiClient: widget.apiClient,
                       repository: widget.repository,
+                      onViewHome: widget.onViewHome,
                     ),
                   ),
                 ),

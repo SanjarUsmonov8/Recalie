@@ -284,6 +284,17 @@ class $PictureGroupsTable extends PictureGroups
       'PRIMARY KEY AUTOINCREMENT',
     ),
   );
+  static const VerificationMeta _setNumberMeta = const VerificationMeta(
+    'setNumber',
+  );
+  @override
+  late final GeneratedColumn<int> setNumber = GeneratedColumn<int>(
+    'set_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
   @override
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
@@ -328,6 +339,50 @@ class $PictureGroupsTable extends PictureGroups
         type: DriftSqlType.dateTime,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _coverIconMeta = const VerificationMeta(
+    'coverIcon',
+  );
+  @override
+  late final GeneratedColumn<String> coverIcon = GeneratedColumn<String>(
+    'cover_icon',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _coverColorStartMeta = const VerificationMeta(
+    'coverColorStart',
+  );
+  @override
+  late final GeneratedColumn<String> coverColorStart = GeneratedColumn<String>(
+    'cover_color_start',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _coverColorEndMeta = const VerificationMeta(
+    'coverColorEnd',
+  );
+  @override
+  late final GeneratedColumn<String> coverColorEnd = GeneratedColumn<String>(
+    'cover_color_end',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _coverImageUrlMeta = const VerificationMeta(
+    'coverImageUrl',
+  );
+  @override
+  late final GeneratedColumn<String> coverImageUrl = GeneratedColumn<String>(
+    'cover_image_url',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -353,10 +408,15 @@ class $PictureGroupsTable extends PictureGroups
   @override
   List<GeneratedColumn> get $columns => [
     id,
+    setNumber,
     name,
     textContent,
     planType,
     planStartDate,
+    coverIcon,
+    coverColorStart,
+    coverColorEnd,
+    coverImageUrl,
     createdAt,
     updatedAt,
   ];
@@ -374,6 +434,12 @@ class $PictureGroupsTable extends PictureGroups
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('set_number')) {
+      context.handle(
+        _setNumberMeta,
+        setNumber.isAcceptableOrUnknown(data['set_number']!, _setNumberMeta),
+      );
     }
     if (data.containsKey('name')) {
       context.handle(
@@ -407,6 +473,39 @@ class $PictureGroupsTable extends PictureGroups
         ),
       );
     }
+    if (data.containsKey('cover_icon')) {
+      context.handle(
+        _coverIconMeta,
+        coverIcon.isAcceptableOrUnknown(data['cover_icon']!, _coverIconMeta),
+      );
+    }
+    if (data.containsKey('cover_color_start')) {
+      context.handle(
+        _coverColorStartMeta,
+        coverColorStart.isAcceptableOrUnknown(
+          data['cover_color_start']!,
+          _coverColorStartMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cover_color_end')) {
+      context.handle(
+        _coverColorEndMeta,
+        coverColorEnd.isAcceptableOrUnknown(
+          data['cover_color_end']!,
+          _coverColorEndMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cover_image_url')) {
+      context.handle(
+        _coverImageUrlMeta,
+        coverImageUrl.isAcceptableOrUnknown(
+          data['cover_image_url']!,
+          _coverImageUrlMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -436,6 +535,10 @@ class $PictureGroupsTable extends PictureGroups
         DriftSqlType.int,
         data['${effectivePrefix}id'],
       )!,
+      setNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}set_number'],
+      ),
       name: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}name'],
@@ -451,6 +554,22 @@ class $PictureGroupsTable extends PictureGroups
       planStartDate: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}plan_start_date'],
+      ),
+      coverIcon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_icon'],
+      ),
+      coverColorStart: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_color_start'],
+      ),
+      coverColorEnd: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_color_end'],
+      ),
+      coverImageUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_image_url'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -471,18 +590,28 @@ class $PictureGroupsTable extends PictureGroups
 
 class PictureGroup extends DataClass implements Insertable<PictureGroup> {
   final int id;
+  final int? setNumber;
   final String name;
   final String? textContent;
   final String planType;
   final DateTime? planStartDate;
+  final String? coverIcon;
+  final String? coverColorStart;
+  final String? coverColorEnd;
+  final String? coverImageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
   const PictureGroup({
     required this.id,
+    this.setNumber,
     required this.name,
     this.textContent,
     required this.planType,
     this.planStartDate,
+    this.coverIcon,
+    this.coverColorStart,
+    this.coverColorEnd,
+    this.coverImageUrl,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -490,6 +619,9 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
+    if (!nullToAbsent || setNumber != null) {
+      map['set_number'] = Variable<int>(setNumber);
+    }
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || textContent != null) {
       map['text_content'] = Variable<String>(textContent);
@@ -497,6 +629,18 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
     map['plan_type'] = Variable<String>(planType);
     if (!nullToAbsent || planStartDate != null) {
       map['plan_start_date'] = Variable<DateTime>(planStartDate);
+    }
+    if (!nullToAbsent || coverIcon != null) {
+      map['cover_icon'] = Variable<String>(coverIcon);
+    }
+    if (!nullToAbsent || coverColorStart != null) {
+      map['cover_color_start'] = Variable<String>(coverColorStart);
+    }
+    if (!nullToAbsent || coverColorEnd != null) {
+      map['cover_color_end'] = Variable<String>(coverColorEnd);
+    }
+    if (!nullToAbsent || coverImageUrl != null) {
+      map['cover_image_url'] = Variable<String>(coverImageUrl);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -506,6 +650,9 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
   PictureGroupsCompanion toCompanion(bool nullToAbsent) {
     return PictureGroupsCompanion(
       id: Value(id),
+      setNumber: setNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(setNumber),
       name: Value(name),
       textContent: textContent == null && nullToAbsent
           ? const Value.absent()
@@ -514,6 +661,18 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
       planStartDate: planStartDate == null && nullToAbsent
           ? const Value.absent()
           : Value(planStartDate),
+      coverIcon: coverIcon == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverIcon),
+      coverColorStart: coverColorStart == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverColorStart),
+      coverColorEnd: coverColorEnd == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverColorEnd),
+      coverImageUrl: coverImageUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverImageUrl),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -526,10 +685,15 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return PictureGroup(
       id: serializer.fromJson<int>(json['id']),
+      setNumber: serializer.fromJson<int?>(json['setNumber']),
       name: serializer.fromJson<String>(json['name']),
       textContent: serializer.fromJson<String?>(json['textContent']),
       planType: serializer.fromJson<String>(json['planType']),
       planStartDate: serializer.fromJson<DateTime?>(json['planStartDate']),
+      coverIcon: serializer.fromJson<String?>(json['coverIcon']),
+      coverColorStart: serializer.fromJson<String?>(json['coverColorStart']),
+      coverColorEnd: serializer.fromJson<String?>(json['coverColorEnd']),
+      coverImageUrl: serializer.fromJson<String?>(json['coverImageUrl']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -539,10 +703,15 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
+      'setNumber': serializer.toJson<int?>(setNumber),
       'name': serializer.toJson<String>(name),
       'textContent': serializer.toJson<String?>(textContent),
       'planType': serializer.toJson<String>(planType),
       'planStartDate': serializer.toJson<DateTime?>(planStartDate),
+      'coverIcon': serializer.toJson<String?>(coverIcon),
+      'coverColorStart': serializer.toJson<String?>(coverColorStart),
+      'coverColorEnd': serializer.toJson<String?>(coverColorEnd),
+      'coverImageUrl': serializer.toJson<String?>(coverImageUrl),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -550,26 +719,43 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
 
   PictureGroup copyWith({
     int? id,
+    Value<int?> setNumber = const Value.absent(),
     String? name,
     Value<String?> textContent = const Value.absent(),
     String? planType,
     Value<DateTime?> planStartDate = const Value.absent(),
+    Value<String?> coverIcon = const Value.absent(),
+    Value<String?> coverColorStart = const Value.absent(),
+    Value<String?> coverColorEnd = const Value.absent(),
+    Value<String?> coverImageUrl = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => PictureGroup(
     id: id ?? this.id,
+    setNumber: setNumber.present ? setNumber.value : this.setNumber,
     name: name ?? this.name,
     textContent: textContent.present ? textContent.value : this.textContent,
     planType: planType ?? this.planType,
     planStartDate: planStartDate.present
         ? planStartDate.value
         : this.planStartDate,
+    coverIcon: coverIcon.present ? coverIcon.value : this.coverIcon,
+    coverColorStart: coverColorStart.present
+        ? coverColorStart.value
+        : this.coverColorStart,
+    coverColorEnd: coverColorEnd.present
+        ? coverColorEnd.value
+        : this.coverColorEnd,
+    coverImageUrl: coverImageUrl.present
+        ? coverImageUrl.value
+        : this.coverImageUrl,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   PictureGroup copyWithCompanion(PictureGroupsCompanion data) {
     return PictureGroup(
       id: data.id.present ? data.id.value : this.id,
+      setNumber: data.setNumber.present ? data.setNumber.value : this.setNumber,
       name: data.name.present ? data.name.value : this.name,
       textContent: data.textContent.present
           ? data.textContent.value
@@ -578,6 +764,16 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
       planStartDate: data.planStartDate.present
           ? data.planStartDate.value
           : this.planStartDate,
+      coverIcon: data.coverIcon.present ? data.coverIcon.value : this.coverIcon,
+      coverColorStart: data.coverColorStart.present
+          ? data.coverColorStart.value
+          : this.coverColorStart,
+      coverColorEnd: data.coverColorEnd.present
+          ? data.coverColorEnd.value
+          : this.coverColorEnd,
+      coverImageUrl: data.coverImageUrl.present
+          ? data.coverImageUrl.value
+          : this.coverImageUrl,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -587,10 +783,15 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
   String toString() {
     return (StringBuffer('PictureGroup(')
           ..write('id: $id, ')
+          ..write('setNumber: $setNumber, ')
           ..write('name: $name, ')
           ..write('textContent: $textContent, ')
           ..write('planType: $planType, ')
           ..write('planStartDate: $planStartDate, ')
+          ..write('coverIcon: $coverIcon, ')
+          ..write('coverColorStart: $coverColorStart, ')
+          ..write('coverColorEnd: $coverColorEnd, ')
+          ..write('coverImageUrl: $coverImageUrl, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -600,10 +801,15 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
   @override
   int get hashCode => Object.hash(
     id,
+    setNumber,
     name,
     textContent,
     planType,
     planStartDate,
+    coverIcon,
+    coverColorStart,
+    coverColorEnd,
+    coverImageUrl,
     createdAt,
     updatedAt,
   );
@@ -612,37 +818,57 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
       identical(this, other) ||
       (other is PictureGroup &&
           other.id == this.id &&
+          other.setNumber == this.setNumber &&
           other.name == this.name &&
           other.textContent == this.textContent &&
           other.planType == this.planType &&
           other.planStartDate == this.planStartDate &&
+          other.coverIcon == this.coverIcon &&
+          other.coverColorStart == this.coverColorStart &&
+          other.coverColorEnd == this.coverColorEnd &&
+          other.coverImageUrl == this.coverImageUrl &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
 
 class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
   final Value<int> id;
+  final Value<int?> setNumber;
   final Value<String> name;
   final Value<String?> textContent;
   final Value<String> planType;
   final Value<DateTime?> planStartDate;
+  final Value<String?> coverIcon;
+  final Value<String?> coverColorStart;
+  final Value<String?> coverColorEnd;
+  final Value<String?> coverImageUrl;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const PictureGroupsCompanion({
     this.id = const Value.absent(),
+    this.setNumber = const Value.absent(),
     this.name = const Value.absent(),
     this.textContent = const Value.absent(),
     this.planType = const Value.absent(),
     this.planStartDate = const Value.absent(),
+    this.coverIcon = const Value.absent(),
+    this.coverColorStart = const Value.absent(),
+    this.coverColorEnd = const Value.absent(),
+    this.coverImageUrl = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   PictureGroupsCompanion.insert({
     this.id = const Value.absent(),
+    this.setNumber = const Value.absent(),
     required String name,
     this.textContent = const Value.absent(),
     this.planType = const Value.absent(),
     this.planStartDate = const Value.absent(),
+    this.coverIcon = const Value.absent(),
+    this.coverColorStart = const Value.absent(),
+    this.coverColorEnd = const Value.absent(),
+    this.coverImageUrl = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : name = Value(name),
@@ -650,19 +876,29 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
        updatedAt = Value(updatedAt);
   static Insertable<PictureGroup> custom({
     Expression<int>? id,
+    Expression<int>? setNumber,
     Expression<String>? name,
     Expression<String>? textContent,
     Expression<String>? planType,
     Expression<DateTime>? planStartDate,
+    Expression<String>? coverIcon,
+    Expression<String>? coverColorStart,
+    Expression<String>? coverColorEnd,
+    Expression<String>? coverImageUrl,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (setNumber != null) 'set_number': setNumber,
       if (name != null) 'name': name,
       if (textContent != null) 'text_content': textContent,
       if (planType != null) 'plan_type': planType,
       if (planStartDate != null) 'plan_start_date': planStartDate,
+      if (coverIcon != null) 'cover_icon': coverIcon,
+      if (coverColorStart != null) 'cover_color_start': coverColorStart,
+      if (coverColorEnd != null) 'cover_color_end': coverColorEnd,
+      if (coverImageUrl != null) 'cover_image_url': coverImageUrl,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -670,19 +906,29 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
 
   PictureGroupsCompanion copyWith({
     Value<int>? id,
+    Value<int?>? setNumber,
     Value<String>? name,
     Value<String?>? textContent,
     Value<String>? planType,
     Value<DateTime?>? planStartDate,
+    Value<String?>? coverIcon,
+    Value<String?>? coverColorStart,
+    Value<String?>? coverColorEnd,
+    Value<String?>? coverImageUrl,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
     return PictureGroupsCompanion(
       id: id ?? this.id,
+      setNumber: setNumber ?? this.setNumber,
       name: name ?? this.name,
       textContent: textContent ?? this.textContent,
       planType: planType ?? this.planType,
       planStartDate: planStartDate ?? this.planStartDate,
+      coverIcon: coverIcon ?? this.coverIcon,
+      coverColorStart: coverColorStart ?? this.coverColorStart,
+      coverColorEnd: coverColorEnd ?? this.coverColorEnd,
+      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -693,6 +939,9 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<int>(id.value);
+    }
+    if (setNumber.present) {
+      map['set_number'] = Variable<int>(setNumber.value);
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
@@ -705,6 +954,18 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
     }
     if (planStartDate.present) {
       map['plan_start_date'] = Variable<DateTime>(planStartDate.value);
+    }
+    if (coverIcon.present) {
+      map['cover_icon'] = Variable<String>(coverIcon.value);
+    }
+    if (coverColorStart.present) {
+      map['cover_color_start'] = Variable<String>(coverColorStart.value);
+    }
+    if (coverColorEnd.present) {
+      map['cover_color_end'] = Variable<String>(coverColorEnd.value);
+    }
+    if (coverImageUrl.present) {
+      map['cover_image_url'] = Variable<String>(coverImageUrl.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -719,10 +980,15 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
   String toString() {
     return (StringBuffer('PictureGroupsCompanion(')
           ..write('id: $id, ')
+          ..write('setNumber: $setNumber, ')
           ..write('name: $name, ')
           ..write('textContent: $textContent, ')
           ..write('planType: $planType, ')
           ..write('planStartDate: $planStartDate, ')
+          ..write('coverIcon: $coverIcon, ')
+          ..write('coverColorStart: $coverColorStart, ')
+          ..write('coverColorEnd: $coverColorEnd, ')
+          ..write('coverImageUrl: $coverImageUrl, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -774,6 +1040,33 @@ class $GroupPicturesTable extends GroupPictures
     type: DriftSqlType.blob,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isReviewedMeta = const VerificationMeta(
+    'isReviewed',
+  );
+  @override
+  late final GeneratedColumn<bool> isReviewed = GeneratedColumn<bool>(
+    'is_reviewed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_reviewed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -790,6 +1083,8 @@ class $GroupPicturesTable extends GroupPictures
     id,
     pictureGroupId,
     imageBytes,
+    position,
+    isReviewed,
     createdAt,
   ];
   @override
@@ -826,6 +1121,18 @@ class $GroupPicturesTable extends GroupPictures
     } else if (isInserting) {
       context.missing(_imageBytesMeta);
     }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    }
+    if (data.containsKey('is_reviewed')) {
+      context.handle(
+        _isReviewedMeta,
+        isReviewed.isAcceptableOrUnknown(data['is_reviewed']!, _isReviewedMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -855,6 +1162,14 @@ class $GroupPicturesTable extends GroupPictures
         DriftSqlType.blob,
         data['${effectivePrefix}image_bytes'],
       )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      isReviewed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_reviewed'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -872,11 +1187,15 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
   final int id;
   final int pictureGroupId;
   final Uint8List imageBytes;
+  final int position;
+  final bool isReviewed;
   final DateTime createdAt;
   const GroupPicture({
     required this.id,
     required this.pictureGroupId,
     required this.imageBytes,
+    required this.position,
+    required this.isReviewed,
     required this.createdAt,
   });
   @override
@@ -885,6 +1204,8 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
     map['id'] = Variable<int>(id);
     map['picture_group_id'] = Variable<int>(pictureGroupId);
     map['image_bytes'] = Variable<Uint8List>(imageBytes);
+    map['position'] = Variable<int>(position);
+    map['is_reviewed'] = Variable<bool>(isReviewed);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -894,6 +1215,8 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
       id: Value(id),
       pictureGroupId: Value(pictureGroupId),
       imageBytes: Value(imageBytes),
+      position: Value(position),
+      isReviewed: Value(isReviewed),
       createdAt: Value(createdAt),
     );
   }
@@ -907,6 +1230,8 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
       id: serializer.fromJson<int>(json['id']),
       pictureGroupId: serializer.fromJson<int>(json['pictureGroupId']),
       imageBytes: serializer.fromJson<Uint8List>(json['imageBytes']),
+      position: serializer.fromJson<int>(json['position']),
+      isReviewed: serializer.fromJson<bool>(json['isReviewed']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -917,6 +1242,8 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
       'id': serializer.toJson<int>(id),
       'pictureGroupId': serializer.toJson<int>(pictureGroupId),
       'imageBytes': serializer.toJson<Uint8List>(imageBytes),
+      'position': serializer.toJson<int>(position),
+      'isReviewed': serializer.toJson<bool>(isReviewed),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -925,11 +1252,15 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
     int? id,
     int? pictureGroupId,
     Uint8List? imageBytes,
+    int? position,
+    bool? isReviewed,
     DateTime? createdAt,
   }) => GroupPicture(
     id: id ?? this.id,
     pictureGroupId: pictureGroupId ?? this.pictureGroupId,
     imageBytes: imageBytes ?? this.imageBytes,
+    position: position ?? this.position,
+    isReviewed: isReviewed ?? this.isReviewed,
     createdAt: createdAt ?? this.createdAt,
   );
   GroupPicture copyWithCompanion(GroupPicturesCompanion data) {
@@ -941,6 +1272,10 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
       imageBytes: data.imageBytes.present
           ? data.imageBytes.value
           : this.imageBytes,
+      position: data.position.present ? data.position.value : this.position,
+      isReviewed: data.isReviewed.present
+          ? data.isReviewed.value
+          : this.isReviewed,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -951,6 +1286,8 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
           ..write('id: $id, ')
           ..write('pictureGroupId: $pictureGroupId, ')
           ..write('imageBytes: $imageBytes, ')
+          ..write('position: $position, ')
+          ..write('isReviewed: $isReviewed, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -961,6 +1298,8 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
     id,
     pictureGroupId,
     $driftBlobEquality.hash(imageBytes),
+    position,
+    isReviewed,
     createdAt,
   );
   @override
@@ -970,6 +1309,8 @@ class GroupPicture extends DataClass implements Insertable<GroupPicture> {
           other.id == this.id &&
           other.pictureGroupId == this.pictureGroupId &&
           $driftBlobEquality.equals(other.imageBytes, this.imageBytes) &&
+          other.position == this.position &&
+          other.isReviewed == this.isReviewed &&
           other.createdAt == this.createdAt);
 }
 
@@ -977,17 +1318,23 @@ class GroupPicturesCompanion extends UpdateCompanion<GroupPicture> {
   final Value<int> id;
   final Value<int> pictureGroupId;
   final Value<Uint8List> imageBytes;
+  final Value<int> position;
+  final Value<bool> isReviewed;
   final Value<DateTime> createdAt;
   const GroupPicturesCompanion({
     this.id = const Value.absent(),
     this.pictureGroupId = const Value.absent(),
     this.imageBytes = const Value.absent(),
+    this.position = const Value.absent(),
+    this.isReviewed = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   GroupPicturesCompanion.insert({
     this.id = const Value.absent(),
     required int pictureGroupId,
     required Uint8List imageBytes,
+    this.position = const Value.absent(),
+    this.isReviewed = const Value.absent(),
     required DateTime createdAt,
   }) : pictureGroupId = Value(pictureGroupId),
        imageBytes = Value(imageBytes),
@@ -996,12 +1343,16 @@ class GroupPicturesCompanion extends UpdateCompanion<GroupPicture> {
     Expression<int>? id,
     Expression<int>? pictureGroupId,
     Expression<Uint8List>? imageBytes,
+    Expression<int>? position,
+    Expression<bool>? isReviewed,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (pictureGroupId != null) 'picture_group_id': pictureGroupId,
       if (imageBytes != null) 'image_bytes': imageBytes,
+      if (position != null) 'position': position,
+      if (isReviewed != null) 'is_reviewed': isReviewed,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -1010,12 +1361,16 @@ class GroupPicturesCompanion extends UpdateCompanion<GroupPicture> {
     Value<int>? id,
     Value<int>? pictureGroupId,
     Value<Uint8List>? imageBytes,
+    Value<int>? position,
+    Value<bool>? isReviewed,
     Value<DateTime>? createdAt,
   }) {
     return GroupPicturesCompanion(
       id: id ?? this.id,
       pictureGroupId: pictureGroupId ?? this.pictureGroupId,
       imageBytes: imageBytes ?? this.imageBytes,
+      position: position ?? this.position,
+      isReviewed: isReviewed ?? this.isReviewed,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -1032,6 +1387,12 @@ class GroupPicturesCompanion extends UpdateCompanion<GroupPicture> {
     if (imageBytes.present) {
       map['image_bytes'] = Variable<Uint8List>(imageBytes.value);
     }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (isReviewed.present) {
+      map['is_reviewed'] = Variable<bool>(isReviewed.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1044,6 +1405,8 @@ class GroupPicturesCompanion extends UpdateCompanion<GroupPicture> {
           ..write('id: $id, ')
           ..write('pictureGroupId: $pictureGroupId, ')
           ..write('imageBytes: $imageBytes, ')
+          ..write('position: $position, ')
+          ..write('isReviewed: $isReviewed, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1311,6 +1674,1046 @@ class RecallEventsCompanion extends UpdateCompanion<RecallEvent> {
   }
 }
 
+class $ImageAnnotationStrokesTable extends ImageAnnotationStrokes
+    with TableInfo<$ImageAnnotationStrokesTable, ImageAnnotationStroke> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ImageAnnotationStrokesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _pictureIdMeta = const VerificationMeta(
+    'pictureId',
+  );
+  @override
+  late final GeneratedColumn<int> pictureId = GeneratedColumn<int>(
+    'picture_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES group_pictures (id)',
+    ),
+  );
+  static const VerificationMeta _toolMeta = const VerificationMeta('tool');
+  @override
+  late final GeneratedColumn<String> tool = GeneratedColumn<String>(
+    'tool',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isStraightMeta = const VerificationMeta(
+    'isStraight',
+  );
+  @override
+  late final GeneratedColumn<bool> isStraight = GeneratedColumn<bool>(
+    'is_straight',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_straight" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _thicknessMeta = const VerificationMeta(
+    'thickness',
+  );
+  @override
+  late final GeneratedColumn<double> thickness = GeneratedColumn<double>(
+    'thickness',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _opacityMeta = const VerificationMeta(
+    'opacity',
+  );
+  @override
+  late final GeneratedColumn<double> opacity = GeneratedColumn<double>(
+    'opacity',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colorValueMeta = const VerificationMeta(
+    'colorValue',
+  );
+  @override
+  late final GeneratedColumn<int> colorValue = GeneratedColumn<int>(
+    'color_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _normalizedPointsMeta = const VerificationMeta(
+    'normalizedPoints',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> normalizedPoints =
+      GeneratedColumn<Uint8List>(
+        'normalized_points',
+        aliasedName,
+        false,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    pictureId,
+    tool,
+    isStraight,
+    thickness,
+    opacity,
+    colorValue,
+    normalizedPoints,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'image_annotation_strokes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ImageAnnotationStroke> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('picture_id')) {
+      context.handle(
+        _pictureIdMeta,
+        pictureId.isAcceptableOrUnknown(data['picture_id']!, _pictureIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pictureIdMeta);
+    }
+    if (data.containsKey('tool')) {
+      context.handle(
+        _toolMeta,
+        tool.isAcceptableOrUnknown(data['tool']!, _toolMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_toolMeta);
+    }
+    if (data.containsKey('is_straight')) {
+      context.handle(
+        _isStraightMeta,
+        isStraight.isAcceptableOrUnknown(data['is_straight']!, _isStraightMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_isStraightMeta);
+    }
+    if (data.containsKey('thickness')) {
+      context.handle(
+        _thicknessMeta,
+        thickness.isAcceptableOrUnknown(data['thickness']!, _thicknessMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_thicknessMeta);
+    }
+    if (data.containsKey('opacity')) {
+      context.handle(
+        _opacityMeta,
+        opacity.isAcceptableOrUnknown(data['opacity']!, _opacityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_opacityMeta);
+    }
+    if (data.containsKey('color_value')) {
+      context.handle(
+        _colorValueMeta,
+        colorValue.isAcceptableOrUnknown(data['color_value']!, _colorValueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_colorValueMeta);
+    }
+    if (data.containsKey('normalized_points')) {
+      context.handle(
+        _normalizedPointsMeta,
+        normalizedPoints.isAcceptableOrUnknown(
+          data['normalized_points']!,
+          _normalizedPointsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_normalizedPointsMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ImageAnnotationStroke map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ImageAnnotationStroke(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      pictureId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}picture_id'],
+      )!,
+      tool: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tool'],
+      )!,
+      isStraight: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_straight'],
+      )!,
+      thickness: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}thickness'],
+      )!,
+      opacity: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}opacity'],
+      )!,
+      colorValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color_value'],
+      )!,
+      normalizedPoints: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}normalized_points'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ImageAnnotationStrokesTable createAlias(String alias) {
+    return $ImageAnnotationStrokesTable(attachedDatabase, alias);
+  }
+}
+
+class ImageAnnotationStroke extends DataClass
+    implements Insertable<ImageAnnotationStroke> {
+  final int id;
+  final int pictureId;
+  final String tool;
+  final bool isStraight;
+  final double thickness;
+  final double opacity;
+  final int colorValue;
+  final Uint8List normalizedPoints;
+  final DateTime createdAt;
+  const ImageAnnotationStroke({
+    required this.id,
+    required this.pictureId,
+    required this.tool,
+    required this.isStraight,
+    required this.thickness,
+    required this.opacity,
+    required this.colorValue,
+    required this.normalizedPoints,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['picture_id'] = Variable<int>(pictureId);
+    map['tool'] = Variable<String>(tool);
+    map['is_straight'] = Variable<bool>(isStraight);
+    map['thickness'] = Variable<double>(thickness);
+    map['opacity'] = Variable<double>(opacity);
+    map['color_value'] = Variable<int>(colorValue);
+    map['normalized_points'] = Variable<Uint8List>(normalizedPoints);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ImageAnnotationStrokesCompanion toCompanion(bool nullToAbsent) {
+    return ImageAnnotationStrokesCompanion(
+      id: Value(id),
+      pictureId: Value(pictureId),
+      tool: Value(tool),
+      isStraight: Value(isStraight),
+      thickness: Value(thickness),
+      opacity: Value(opacity),
+      colorValue: Value(colorValue),
+      normalizedPoints: Value(normalizedPoints),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ImageAnnotationStroke.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ImageAnnotationStroke(
+      id: serializer.fromJson<int>(json['id']),
+      pictureId: serializer.fromJson<int>(json['pictureId']),
+      tool: serializer.fromJson<String>(json['tool']),
+      isStraight: serializer.fromJson<bool>(json['isStraight']),
+      thickness: serializer.fromJson<double>(json['thickness']),
+      opacity: serializer.fromJson<double>(json['opacity']),
+      colorValue: serializer.fromJson<int>(json['colorValue']),
+      normalizedPoints: serializer.fromJson<Uint8List>(
+        json['normalizedPoints'],
+      ),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'pictureId': serializer.toJson<int>(pictureId),
+      'tool': serializer.toJson<String>(tool),
+      'isStraight': serializer.toJson<bool>(isStraight),
+      'thickness': serializer.toJson<double>(thickness),
+      'opacity': serializer.toJson<double>(opacity),
+      'colorValue': serializer.toJson<int>(colorValue),
+      'normalizedPoints': serializer.toJson<Uint8List>(normalizedPoints),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ImageAnnotationStroke copyWith({
+    int? id,
+    int? pictureId,
+    String? tool,
+    bool? isStraight,
+    double? thickness,
+    double? opacity,
+    int? colorValue,
+    Uint8List? normalizedPoints,
+    DateTime? createdAt,
+  }) => ImageAnnotationStroke(
+    id: id ?? this.id,
+    pictureId: pictureId ?? this.pictureId,
+    tool: tool ?? this.tool,
+    isStraight: isStraight ?? this.isStraight,
+    thickness: thickness ?? this.thickness,
+    opacity: opacity ?? this.opacity,
+    colorValue: colorValue ?? this.colorValue,
+    normalizedPoints: normalizedPoints ?? this.normalizedPoints,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ImageAnnotationStroke copyWithCompanion(
+    ImageAnnotationStrokesCompanion data,
+  ) {
+    return ImageAnnotationStroke(
+      id: data.id.present ? data.id.value : this.id,
+      pictureId: data.pictureId.present ? data.pictureId.value : this.pictureId,
+      tool: data.tool.present ? data.tool.value : this.tool,
+      isStraight: data.isStraight.present
+          ? data.isStraight.value
+          : this.isStraight,
+      thickness: data.thickness.present ? data.thickness.value : this.thickness,
+      opacity: data.opacity.present ? data.opacity.value : this.opacity,
+      colorValue: data.colorValue.present
+          ? data.colorValue.value
+          : this.colorValue,
+      normalizedPoints: data.normalizedPoints.present
+          ? data.normalizedPoints.value
+          : this.normalizedPoints,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ImageAnnotationStroke(')
+          ..write('id: $id, ')
+          ..write('pictureId: $pictureId, ')
+          ..write('tool: $tool, ')
+          ..write('isStraight: $isStraight, ')
+          ..write('thickness: $thickness, ')
+          ..write('opacity: $opacity, ')
+          ..write('colorValue: $colorValue, ')
+          ..write('normalizedPoints: $normalizedPoints, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    pictureId,
+    tool,
+    isStraight,
+    thickness,
+    opacity,
+    colorValue,
+    $driftBlobEquality.hash(normalizedPoints),
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ImageAnnotationStroke &&
+          other.id == this.id &&
+          other.pictureId == this.pictureId &&
+          other.tool == this.tool &&
+          other.isStraight == this.isStraight &&
+          other.thickness == this.thickness &&
+          other.opacity == this.opacity &&
+          other.colorValue == this.colorValue &&
+          $driftBlobEquality.equals(
+            other.normalizedPoints,
+            this.normalizedPoints,
+          ) &&
+          other.createdAt == this.createdAt);
+}
+
+class ImageAnnotationStrokesCompanion
+    extends UpdateCompanion<ImageAnnotationStroke> {
+  final Value<int> id;
+  final Value<int> pictureId;
+  final Value<String> tool;
+  final Value<bool> isStraight;
+  final Value<double> thickness;
+  final Value<double> opacity;
+  final Value<int> colorValue;
+  final Value<Uint8List> normalizedPoints;
+  final Value<DateTime> createdAt;
+  const ImageAnnotationStrokesCompanion({
+    this.id = const Value.absent(),
+    this.pictureId = const Value.absent(),
+    this.tool = const Value.absent(),
+    this.isStraight = const Value.absent(),
+    this.thickness = const Value.absent(),
+    this.opacity = const Value.absent(),
+    this.colorValue = const Value.absent(),
+    this.normalizedPoints = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ImageAnnotationStrokesCompanion.insert({
+    this.id = const Value.absent(),
+    required int pictureId,
+    required String tool,
+    required bool isStraight,
+    required double thickness,
+    required double opacity,
+    required int colorValue,
+    required Uint8List normalizedPoints,
+    required DateTime createdAt,
+  }) : pictureId = Value(pictureId),
+       tool = Value(tool),
+       isStraight = Value(isStraight),
+       thickness = Value(thickness),
+       opacity = Value(opacity),
+       colorValue = Value(colorValue),
+       normalizedPoints = Value(normalizedPoints),
+       createdAt = Value(createdAt);
+  static Insertable<ImageAnnotationStroke> custom({
+    Expression<int>? id,
+    Expression<int>? pictureId,
+    Expression<String>? tool,
+    Expression<bool>? isStraight,
+    Expression<double>? thickness,
+    Expression<double>? opacity,
+    Expression<int>? colorValue,
+    Expression<Uint8List>? normalizedPoints,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (pictureId != null) 'picture_id': pictureId,
+      if (tool != null) 'tool': tool,
+      if (isStraight != null) 'is_straight': isStraight,
+      if (thickness != null) 'thickness': thickness,
+      if (opacity != null) 'opacity': opacity,
+      if (colorValue != null) 'color_value': colorValue,
+      if (normalizedPoints != null) 'normalized_points': normalizedPoints,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ImageAnnotationStrokesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? pictureId,
+    Value<String>? tool,
+    Value<bool>? isStraight,
+    Value<double>? thickness,
+    Value<double>? opacity,
+    Value<int>? colorValue,
+    Value<Uint8List>? normalizedPoints,
+    Value<DateTime>? createdAt,
+  }) {
+    return ImageAnnotationStrokesCompanion(
+      id: id ?? this.id,
+      pictureId: pictureId ?? this.pictureId,
+      tool: tool ?? this.tool,
+      isStraight: isStraight ?? this.isStraight,
+      thickness: thickness ?? this.thickness,
+      opacity: opacity ?? this.opacity,
+      colorValue: colorValue ?? this.colorValue,
+      normalizedPoints: normalizedPoints ?? this.normalizedPoints,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (pictureId.present) {
+      map['picture_id'] = Variable<int>(pictureId.value);
+    }
+    if (tool.present) {
+      map['tool'] = Variable<String>(tool.value);
+    }
+    if (isStraight.present) {
+      map['is_straight'] = Variable<bool>(isStraight.value);
+    }
+    if (thickness.present) {
+      map['thickness'] = Variable<double>(thickness.value);
+    }
+    if (opacity.present) {
+      map['opacity'] = Variable<double>(opacity.value);
+    }
+    if (colorValue.present) {
+      map['color_value'] = Variable<int>(colorValue.value);
+    }
+    if (normalizedPoints.present) {
+      map['normalized_points'] = Variable<Uint8List>(normalizedPoints.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ImageAnnotationStrokesCompanion(')
+          ..write('id: $id, ')
+          ..write('pictureId: $pictureId, ')
+          ..write('tool: $tool, ')
+          ..write('isStraight: $isStraight, ')
+          ..write('thickness: $thickness, ')
+          ..write('opacity: $opacity, ')
+          ..write('colorValue: $colorValue, ')
+          ..write('normalizedPoints: $normalizedPoints, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ImageNotesTable extends ImageNotes
+    with TableInfo<$ImageNotesTable, ImageNote> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ImageNotesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _pictureIdMeta = const VerificationMeta(
+    'pictureId',
+  );
+  @override
+  late final GeneratedColumn<int> pictureId = GeneratedColumn<int>(
+    'picture_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES group_pictures (id)',
+    ),
+  );
+  static const VerificationMeta _normalizedXMeta = const VerificationMeta(
+    'normalizedX',
+  );
+  @override
+  late final GeneratedColumn<double> normalizedX = GeneratedColumn<double>(
+    'normalized_x',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _normalizedYMeta = const VerificationMeta(
+    'normalizedY',
+  );
+  @override
+  late final GeneratedColumn<double> normalizedY = GeneratedColumn<double>(
+    'normalized_y',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentMeta = const VerificationMeta(
+    'content',
+  );
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+    'content',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    pictureId,
+    normalizedX,
+    normalizedY,
+    content,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'image_notes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ImageNote> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('picture_id')) {
+      context.handle(
+        _pictureIdMeta,
+        pictureId.isAcceptableOrUnknown(data['picture_id']!, _pictureIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pictureIdMeta);
+    }
+    if (data.containsKey('normalized_x')) {
+      context.handle(
+        _normalizedXMeta,
+        normalizedX.isAcceptableOrUnknown(
+          data['normalized_x']!,
+          _normalizedXMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_normalizedXMeta);
+    }
+    if (data.containsKey('normalized_y')) {
+      context.handle(
+        _normalizedYMeta,
+        normalizedY.isAcceptableOrUnknown(
+          data['normalized_y']!,
+          _normalizedYMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_normalizedYMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(
+        _contentMeta,
+        content.isAcceptableOrUnknown(data['content']!, _contentMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ImageNote map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ImageNote(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      pictureId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}picture_id'],
+      )!,
+      normalizedX: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}normalized_x'],
+      )!,
+      normalizedY: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}normalized_y'],
+      )!,
+      content: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ImageNotesTable createAlias(String alias) {
+    return $ImageNotesTable(attachedDatabase, alias);
+  }
+}
+
+class ImageNote extends DataClass implements Insertable<ImageNote> {
+  final int id;
+  final int pictureId;
+  final double normalizedX;
+  final double normalizedY;
+  final String content;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ImageNote({
+    required this.id,
+    required this.pictureId,
+    required this.normalizedX,
+    required this.normalizedY,
+    required this.content,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['picture_id'] = Variable<int>(pictureId);
+    map['normalized_x'] = Variable<double>(normalizedX);
+    map['normalized_y'] = Variable<double>(normalizedY);
+    map['content'] = Variable<String>(content);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  ImageNotesCompanion toCompanion(bool nullToAbsent) {
+    return ImageNotesCompanion(
+      id: Value(id),
+      pictureId: Value(pictureId),
+      normalizedX: Value(normalizedX),
+      normalizedY: Value(normalizedY),
+      content: Value(content),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ImageNote.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ImageNote(
+      id: serializer.fromJson<int>(json['id']),
+      pictureId: serializer.fromJson<int>(json['pictureId']),
+      normalizedX: serializer.fromJson<double>(json['normalizedX']),
+      normalizedY: serializer.fromJson<double>(json['normalizedY']),
+      content: serializer.fromJson<String>(json['content']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'pictureId': serializer.toJson<int>(pictureId),
+      'normalizedX': serializer.toJson<double>(normalizedX),
+      'normalizedY': serializer.toJson<double>(normalizedY),
+      'content': serializer.toJson<String>(content),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ImageNote copyWith({
+    int? id,
+    int? pictureId,
+    double? normalizedX,
+    double? normalizedY,
+    String? content,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ImageNote(
+    id: id ?? this.id,
+    pictureId: pictureId ?? this.pictureId,
+    normalizedX: normalizedX ?? this.normalizedX,
+    normalizedY: normalizedY ?? this.normalizedY,
+    content: content ?? this.content,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ImageNote copyWithCompanion(ImageNotesCompanion data) {
+    return ImageNote(
+      id: data.id.present ? data.id.value : this.id,
+      pictureId: data.pictureId.present ? data.pictureId.value : this.pictureId,
+      normalizedX: data.normalizedX.present
+          ? data.normalizedX.value
+          : this.normalizedX,
+      normalizedY: data.normalizedY.present
+          ? data.normalizedY.value
+          : this.normalizedY,
+      content: data.content.present ? data.content.value : this.content,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ImageNote(')
+          ..write('id: $id, ')
+          ..write('pictureId: $pictureId, ')
+          ..write('normalizedX: $normalizedX, ')
+          ..write('normalizedY: $normalizedY, ')
+          ..write('content: $content, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    pictureId,
+    normalizedX,
+    normalizedY,
+    content,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ImageNote &&
+          other.id == this.id &&
+          other.pictureId == this.pictureId &&
+          other.normalizedX == this.normalizedX &&
+          other.normalizedY == this.normalizedY &&
+          other.content == this.content &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
+  final Value<int> id;
+  final Value<int> pictureId;
+  final Value<double> normalizedX;
+  final Value<double> normalizedY;
+  final Value<String> content;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const ImageNotesCompanion({
+    this.id = const Value.absent(),
+    this.pictureId = const Value.absent(),
+    this.normalizedX = const Value.absent(),
+    this.normalizedY = const Value.absent(),
+    this.content = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  ImageNotesCompanion.insert({
+    this.id = const Value.absent(),
+    required int pictureId,
+    required double normalizedX,
+    required double normalizedY,
+    required String content,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : pictureId = Value(pictureId),
+       normalizedX = Value(normalizedX),
+       normalizedY = Value(normalizedY),
+       content = Value(content),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ImageNote> custom({
+    Expression<int>? id,
+    Expression<int>? pictureId,
+    Expression<double>? normalizedX,
+    Expression<double>? normalizedY,
+    Expression<String>? content,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (pictureId != null) 'picture_id': pictureId,
+      if (normalizedX != null) 'normalized_x': normalizedX,
+      if (normalizedY != null) 'normalized_y': normalizedY,
+      if (content != null) 'content': content,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  ImageNotesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? pictureId,
+    Value<double>? normalizedX,
+    Value<double>? normalizedY,
+    Value<String>? content,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return ImageNotesCompanion(
+      id: id ?? this.id,
+      pictureId: pictureId ?? this.pictureId,
+      normalizedX: normalizedX ?? this.normalizedX,
+      normalizedY: normalizedY ?? this.normalizedY,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (pictureId.present) {
+      map['picture_id'] = Variable<int>(pictureId.value);
+    }
+    if (normalizedX.present) {
+      map['normalized_x'] = Variable<double>(normalizedX.value);
+    }
+    if (normalizedY.present) {
+      map['normalized_y'] = Variable<double>(normalizedY.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ImageNotesCompanion(')
+          ..write('id: $id, ')
+          ..write('pictureId: $pictureId, ')
+          ..write('normalizedX: $normalizedX, ')
+          ..write('normalizedY: $normalizedY, ')
+          ..write('content: $content, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1318,6 +2721,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PictureGroupsTable pictureGroups = $PictureGroupsTable(this);
   late final $GroupPicturesTable groupPictures = $GroupPicturesTable(this);
   late final $RecallEventsTable recallEvents = $RecallEventsTable(this);
+  late final $ImageAnnotationStrokesTable imageAnnotationStrokes =
+      $ImageAnnotationStrokesTable(this);
+  late final $ImageNotesTable imageNotes = $ImageNotesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1327,6 +2733,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     pictureGroups,
     groupPictures,
     recallEvents,
+    imageAnnotationStrokes,
+    imageNotes,
   ];
 }
 
@@ -1506,20 +2914,30 @@ typedef $$AppPreferencesTableProcessedTableManager =
 typedef $$PictureGroupsTableCreateCompanionBuilder =
     PictureGroupsCompanion Function({
       Value<int> id,
+      Value<int?> setNumber,
       required String name,
       Value<String?> textContent,
       Value<String> planType,
       Value<DateTime?> planStartDate,
+      Value<String?> coverIcon,
+      Value<String?> coverColorStart,
+      Value<String?> coverColorEnd,
+      Value<String?> coverImageUrl,
       required DateTime createdAt,
       required DateTime updatedAt,
     });
 typedef $$PictureGroupsTableUpdateCompanionBuilder =
     PictureGroupsCompanion Function({
       Value<int> id,
+      Value<int?> setNumber,
       Value<String> name,
       Value<String?> textContent,
       Value<String> planType,
       Value<DateTime?> planStartDate,
+      Value<String?> coverIcon,
+      Value<String?> coverColorStart,
+      Value<String?> coverColorEnd,
+      Value<String?> coverImageUrl,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
@@ -1583,6 +3001,11 @@ class $$PictureGroupsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get setNumber => $composableBuilder(
+    column: $table.setNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnFilters(column),
@@ -1600,6 +3023,26 @@ class $$PictureGroupsTableFilterComposer
 
   ColumnFilters<DateTime> get planStartDate => $composableBuilder(
     column: $table.planStartDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverIcon => $composableBuilder(
+    column: $table.coverIcon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverColorStart => $composableBuilder(
+    column: $table.coverColorStart,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverColorEnd => $composableBuilder(
+    column: $table.coverColorEnd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverImageUrl => $composableBuilder(
+    column: $table.coverImageUrl,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1678,6 +3121,11 @@ class $$PictureGroupsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get setNumber => $composableBuilder(
+    column: $table.setNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get name => $composableBuilder(
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
@@ -1695,6 +3143,26 @@ class $$PictureGroupsTableOrderingComposer
 
   ColumnOrderings<DateTime> get planStartDate => $composableBuilder(
     column: $table.planStartDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverIcon => $composableBuilder(
+    column: $table.coverIcon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverColorStart => $composableBuilder(
+    column: $table.coverColorStart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverColorEnd => $composableBuilder(
+    column: $table.coverColorEnd,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coverImageUrl => $composableBuilder(
+    column: $table.coverImageUrl,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -1721,6 +3189,9 @@ class $$PictureGroupsTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<int> get setNumber =>
+      $composableBuilder(column: $table.setNumber, builder: (column) => column);
+
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
@@ -1734,6 +3205,24 @@ class $$PictureGroupsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get planStartDate => $composableBuilder(
     column: $table.planStartDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get coverIcon =>
+      $composableBuilder(column: $table.coverIcon, builder: (column) => column);
+
+  GeneratedColumn<String> get coverColorStart => $composableBuilder(
+    column: $table.coverColorStart,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get coverColorEnd => $composableBuilder(
+    column: $table.coverColorEnd,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get coverImageUrl => $composableBuilder(
+    column: $table.coverImageUrl,
     builder: (column) => column,
   );
 
@@ -1826,36 +3315,56 @@ class $$PictureGroupsTableTableManager
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int?> setNumber = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> textContent = const Value.absent(),
                 Value<String> planType = const Value.absent(),
                 Value<DateTime?> planStartDate = const Value.absent(),
+                Value<String?> coverIcon = const Value.absent(),
+                Value<String?> coverColorStart = const Value.absent(),
+                Value<String?> coverColorEnd = const Value.absent(),
+                Value<String?> coverImageUrl = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => PictureGroupsCompanion(
                 id: id,
+                setNumber: setNumber,
                 name: name,
                 textContent: textContent,
                 planType: planType,
                 planStartDate: planStartDate,
+                coverIcon: coverIcon,
+                coverColorStart: coverColorStart,
+                coverColorEnd: coverColorEnd,
+                coverImageUrl: coverImageUrl,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
+                Value<int?> setNumber = const Value.absent(),
                 required String name,
                 Value<String?> textContent = const Value.absent(),
                 Value<String> planType = const Value.absent(),
                 Value<DateTime?> planStartDate = const Value.absent(),
+                Value<String?> coverIcon = const Value.absent(),
+                Value<String?> coverColorStart = const Value.absent(),
+                Value<String?> coverColorEnd = const Value.absent(),
+                Value<String?> coverImageUrl = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
               }) => PictureGroupsCompanion.insert(
                 id: id,
+                setNumber: setNumber,
                 name: name,
                 textContent: textContent,
                 planType: planType,
                 planStartDate: planStartDate,
+                coverIcon: coverIcon,
+                coverColorStart: coverColorStart,
+                coverColorEnd: coverColorEnd,
+                coverImageUrl: coverImageUrl,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -1947,6 +3456,8 @@ typedef $$GroupPicturesTableCreateCompanionBuilder =
       Value<int> id,
       required int pictureGroupId,
       required Uint8List imageBytes,
+      Value<int> position,
+      Value<bool> isReviewed,
       required DateTime createdAt,
     });
 typedef $$GroupPicturesTableUpdateCompanionBuilder =
@@ -1954,6 +3465,8 @@ typedef $$GroupPicturesTableUpdateCompanionBuilder =
       Value<int> id,
       Value<int> pictureGroupId,
       Value<Uint8List> imageBytes,
+      Value<int> position,
+      Value<bool> isReviewed,
       Value<DateTime> createdAt,
     });
 
@@ -1982,6 +3495,49 @@ final class $$GroupPicturesTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<
+    $ImageAnnotationStrokesTable,
+    List<ImageAnnotationStroke>
+  >
+  _imageAnnotationStrokesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.imageAnnotationStrokes,
+        aliasName: 'group_pictures__id__image_annotation_strokes__picture_id',
+      );
+
+  $$ImageAnnotationStrokesTableProcessedTableManager
+  get imageAnnotationStrokesRefs {
+    final manager = $$ImageAnnotationStrokesTableTableManager(
+      $_db,
+      $_db.imageAnnotationStrokes,
+    ).filter((f) => f.pictureId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _imageAnnotationStrokesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ImageNotesTable, List<ImageNote>>
+  _imageNotesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.imageNotes,
+    aliasName: 'group_pictures__id__image_notes__picture_id',
+  );
+
+  $$ImageNotesTableProcessedTableManager get imageNotesRefs {
+    final manager = $$ImageNotesTableTableManager(
+      $_db,
+      $_db.imageNotes,
+    ).filter((f) => f.pictureId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_imageNotesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$GroupPicturesTableFilterComposer
@@ -2000,6 +3556,16 @@ class $$GroupPicturesTableFilterComposer
 
   ColumnFilters<Uint8List> get imageBytes => $composableBuilder(
     column: $table.imageBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isReviewed => $composableBuilder(
+    column: $table.isReviewed,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2030,6 +3596,57 @@ class $$GroupPicturesTableFilterComposer
     );
     return composer;
   }
+
+  Expression<bool> imageAnnotationStrokesRefs(
+    Expression<bool> Function($$ImageAnnotationStrokesTableFilterComposer f) f,
+  ) {
+    final $$ImageAnnotationStrokesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.imageAnnotationStrokes,
+          getReferencedColumn: (t) => t.pictureId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ImageAnnotationStrokesTableFilterComposer(
+                $db: $db,
+                $table: $db.imageAnnotationStrokes,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> imageNotesRefs(
+    Expression<bool> Function($$ImageNotesTableFilterComposer f) f,
+  ) {
+    final $$ImageNotesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.imageNotes,
+      getReferencedColumn: (t) => t.pictureId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ImageNotesTableFilterComposer(
+            $db: $db,
+            $table: $db.imageNotes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$GroupPicturesTableOrderingComposer
@@ -2048,6 +3665,16 @@ class $$GroupPicturesTableOrderingComposer
 
   ColumnOrderings<Uint8List> get imageBytes => $composableBuilder(
     column: $table.imageBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isReviewed => $composableBuilder(
+    column: $table.isReviewed,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2097,6 +3724,14 @@ class $$GroupPicturesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<bool> get isReviewed => $composableBuilder(
+    column: $table.isReviewed,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -2122,6 +3757,57 @@ class $$GroupPicturesTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> imageAnnotationStrokesRefs<T extends Object>(
+    Expression<T> Function($$ImageAnnotationStrokesTableAnnotationComposer a) f,
+  ) {
+    final $$ImageAnnotationStrokesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.imageAnnotationStrokes,
+          getReferencedColumn: (t) => t.pictureId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$ImageAnnotationStrokesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.imageAnnotationStrokes,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> imageNotesRefs<T extends Object>(
+    Expression<T> Function($$ImageNotesTableAnnotationComposer a) f,
+  ) {
+    final $$ImageNotesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.imageNotes,
+      getReferencedColumn: (t) => t.pictureId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ImageNotesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.imageNotes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$GroupPicturesTableTableManager
@@ -2137,7 +3823,11 @@ class $$GroupPicturesTableTableManager
           $$GroupPicturesTableUpdateCompanionBuilder,
           (GroupPicture, $$GroupPicturesTableReferences),
           GroupPicture,
-          PrefetchHooks Function({bool pictureGroupId})
+          PrefetchHooks Function({
+            bool pictureGroupId,
+            bool imageAnnotationStrokesRefs,
+            bool imageNotesRefs,
+          })
         > {
   $$GroupPicturesTableTableManager(_$AppDatabase db, $GroupPicturesTable table)
     : super(
@@ -2155,11 +3845,15 @@ class $$GroupPicturesTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<int> pictureGroupId = const Value.absent(),
                 Value<Uint8List> imageBytes = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<bool> isReviewed = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => GroupPicturesCompanion(
                 id: id,
                 pictureGroupId: pictureGroupId,
                 imageBytes: imageBytes,
+                position: position,
+                isReviewed: isReviewed,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -2167,11 +3861,15 @@ class $$GroupPicturesTableTableManager
                 Value<int> id = const Value.absent(),
                 required int pictureGroupId,
                 required Uint8List imageBytes,
+                Value<int> position = const Value.absent(),
+                Value<bool> isReviewed = const Value.absent(),
                 required DateTime createdAt,
               }) => GroupPicturesCompanion.insert(
                 id: id,
                 pictureGroupId: pictureGroupId,
                 imageBytes: imageBytes,
+                position: position,
+                isReviewed: isReviewed,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -2182,47 +3880,100 @@ class $$GroupPicturesTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({pictureGroupId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (pictureGroupId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.pictureGroupId,
-                                referencedTable: $$GroupPicturesTableReferences
-                                    ._pictureGroupIdTable(db),
-                                referencedColumn: $$GroupPicturesTableReferences
-                                    ._pictureGroupIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                pictureGroupId = false,
+                imageAnnotationStrokesRefs = false,
+                imageNotesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (imageAnnotationStrokesRefs) db.imageAnnotationStrokes,
+                    if (imageNotesRefs) db.imageNotes,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (pictureGroupId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.pictureGroupId,
+                                    referencedTable:
+                                        $$GroupPicturesTableReferences
+                                            ._pictureGroupIdTable(db),
+                                    referencedColumn:
+                                        $$GroupPicturesTableReferences
+                                            ._pictureGroupIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (imageAnnotationStrokesRefs)
+                        await $_getPrefetchedData<
+                          GroupPicture,
+                          $GroupPicturesTable,
+                          ImageAnnotationStroke
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupPicturesTableReferences
+                              ._imageAnnotationStrokesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupPicturesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).imageAnnotationStrokesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.pictureId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (imageNotesRefs)
+                        await $_getPrefetchedData<
+                          GroupPicture,
+                          $GroupPicturesTable,
+                          ImageNote
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupPicturesTableReferences
+                              ._imageNotesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupPicturesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).imageNotesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.pictureId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -2239,7 +3990,11 @@ typedef $$GroupPicturesTableProcessedTableManager =
       $$GroupPicturesTableUpdateCompanionBuilder,
       (GroupPicture, $$GroupPicturesTableReferences),
       GroupPicture,
-      PrefetchHooks Function({bool pictureGroupId})
+      PrefetchHooks Function({
+        bool pictureGroupId,
+        bool imageAnnotationStrokesRefs,
+        bool imageNotesRefs,
+      })
     >;
 typedef $$RecallEventsTableCreateCompanionBuilder =
     RecallEventsCompanion Function({
@@ -2517,6 +4272,779 @@ typedef $$RecallEventsTableProcessedTableManager =
       RecallEvent,
       PrefetchHooks Function({bool pictureGroupId})
     >;
+typedef $$ImageAnnotationStrokesTableCreateCompanionBuilder =
+    ImageAnnotationStrokesCompanion Function({
+      Value<int> id,
+      required int pictureId,
+      required String tool,
+      required bool isStraight,
+      required double thickness,
+      required double opacity,
+      required int colorValue,
+      required Uint8List normalizedPoints,
+      required DateTime createdAt,
+    });
+typedef $$ImageAnnotationStrokesTableUpdateCompanionBuilder =
+    ImageAnnotationStrokesCompanion Function({
+      Value<int> id,
+      Value<int> pictureId,
+      Value<String> tool,
+      Value<bool> isStraight,
+      Value<double> thickness,
+      Value<double> opacity,
+      Value<int> colorValue,
+      Value<Uint8List> normalizedPoints,
+      Value<DateTime> createdAt,
+    });
+
+final class $$ImageAnnotationStrokesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $ImageAnnotationStrokesTable,
+          ImageAnnotationStroke
+        > {
+  $$ImageAnnotationStrokesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $GroupPicturesTable _pictureIdTable(_$AppDatabase db) => db
+      .groupPictures
+      .createAlias('image_annotation_strokes__picture_id__group_pictures__id');
+
+  $$GroupPicturesTableProcessedTableManager get pictureId {
+    final $_column = $_itemColumn<int>('picture_id')!;
+
+    final manager = $$GroupPicturesTableTableManager(
+      $_db,
+      $_db.groupPictures,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_pictureIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ImageAnnotationStrokesTableFilterComposer
+    extends Composer<_$AppDatabase, $ImageAnnotationStrokesTable> {
+  $$ImageAnnotationStrokesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tool => $composableBuilder(
+    column: $table.tool,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isStraight => $composableBuilder(
+    column: $table.isStraight,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get thickness => $composableBuilder(
+    column: $table.thickness,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get opacity => $composableBuilder(
+    column: $table.opacity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get colorValue => $composableBuilder(
+    column: $table.colorValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get normalizedPoints => $composableBuilder(
+    column: $table.normalizedPoints,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupPicturesTableFilterComposer get pictureId {
+    final $$GroupPicturesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pictureId,
+      referencedTable: $db.groupPictures,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupPicturesTableFilterComposer(
+            $db: $db,
+            $table: $db.groupPictures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ImageAnnotationStrokesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ImageAnnotationStrokesTable> {
+  $$ImageAnnotationStrokesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tool => $composableBuilder(
+    column: $table.tool,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isStraight => $composableBuilder(
+    column: $table.isStraight,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get thickness => $composableBuilder(
+    column: $table.thickness,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get opacity => $composableBuilder(
+    column: $table.opacity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get colorValue => $composableBuilder(
+    column: $table.colorValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get normalizedPoints => $composableBuilder(
+    column: $table.normalizedPoints,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupPicturesTableOrderingComposer get pictureId {
+    final $$GroupPicturesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pictureId,
+      referencedTable: $db.groupPictures,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupPicturesTableOrderingComposer(
+            $db: $db,
+            $table: $db.groupPictures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ImageAnnotationStrokesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ImageAnnotationStrokesTable> {
+  $$ImageAnnotationStrokesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get tool =>
+      $composableBuilder(column: $table.tool, builder: (column) => column);
+
+  GeneratedColumn<bool> get isStraight => $composableBuilder(
+    column: $table.isStraight,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get thickness =>
+      $composableBuilder(column: $table.thickness, builder: (column) => column);
+
+  GeneratedColumn<double> get opacity =>
+      $composableBuilder(column: $table.opacity, builder: (column) => column);
+
+  GeneratedColumn<int> get colorValue => $composableBuilder(
+    column: $table.colorValue,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get normalizedPoints => $composableBuilder(
+    column: $table.normalizedPoints,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$GroupPicturesTableAnnotationComposer get pictureId {
+    final $$GroupPicturesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pictureId,
+      referencedTable: $db.groupPictures,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupPicturesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groupPictures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ImageAnnotationStrokesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ImageAnnotationStrokesTable,
+          ImageAnnotationStroke,
+          $$ImageAnnotationStrokesTableFilterComposer,
+          $$ImageAnnotationStrokesTableOrderingComposer,
+          $$ImageAnnotationStrokesTableAnnotationComposer,
+          $$ImageAnnotationStrokesTableCreateCompanionBuilder,
+          $$ImageAnnotationStrokesTableUpdateCompanionBuilder,
+          (ImageAnnotationStroke, $$ImageAnnotationStrokesTableReferences),
+          ImageAnnotationStroke,
+          PrefetchHooks Function({bool pictureId})
+        > {
+  $$ImageAnnotationStrokesTableTableManager(
+    _$AppDatabase db,
+    $ImageAnnotationStrokesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ImageAnnotationStrokesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$ImageAnnotationStrokesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ImageAnnotationStrokesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> pictureId = const Value.absent(),
+                Value<String> tool = const Value.absent(),
+                Value<bool> isStraight = const Value.absent(),
+                Value<double> thickness = const Value.absent(),
+                Value<double> opacity = const Value.absent(),
+                Value<int> colorValue = const Value.absent(),
+                Value<Uint8List> normalizedPoints = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ImageAnnotationStrokesCompanion(
+                id: id,
+                pictureId: pictureId,
+                tool: tool,
+                isStraight: isStraight,
+                thickness: thickness,
+                opacity: opacity,
+                colorValue: colorValue,
+                normalizedPoints: normalizedPoints,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int pictureId,
+                required String tool,
+                required bool isStraight,
+                required double thickness,
+                required double opacity,
+                required int colorValue,
+                required Uint8List normalizedPoints,
+                required DateTime createdAt,
+              }) => ImageAnnotationStrokesCompanion.insert(
+                id: id,
+                pictureId: pictureId,
+                tool: tool,
+                isStraight: isStraight,
+                thickness: thickness,
+                opacity: opacity,
+                colorValue: colorValue,
+                normalizedPoints: normalizedPoints,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $ImageAnnotationStrokesTable,
+                    ImageAnnotationStroke
+                  >(table),
+                  $$ImageAnnotationStrokesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({pictureId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (pictureId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.pictureId,
+                                referencedTable:
+                                    $$ImageAnnotationStrokesTableReferences
+                                        ._pictureIdTable(db),
+                                referencedColumn:
+                                    $$ImageAnnotationStrokesTableReferences
+                                        ._pictureIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ImageAnnotationStrokesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ImageAnnotationStrokesTable,
+      ImageAnnotationStroke,
+      $$ImageAnnotationStrokesTableFilterComposer,
+      $$ImageAnnotationStrokesTableOrderingComposer,
+      $$ImageAnnotationStrokesTableAnnotationComposer,
+      $$ImageAnnotationStrokesTableCreateCompanionBuilder,
+      $$ImageAnnotationStrokesTableUpdateCompanionBuilder,
+      (ImageAnnotationStroke, $$ImageAnnotationStrokesTableReferences),
+      ImageAnnotationStroke,
+      PrefetchHooks Function({bool pictureId})
+    >;
+typedef $$ImageNotesTableCreateCompanionBuilder =
+    ImageNotesCompanion Function({
+      Value<int> id,
+      required int pictureId,
+      required double normalizedX,
+      required double normalizedY,
+      required String content,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$ImageNotesTableUpdateCompanionBuilder =
+    ImageNotesCompanion Function({
+      Value<int> id,
+      Value<int> pictureId,
+      Value<double> normalizedX,
+      Value<double> normalizedY,
+      Value<String> content,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$ImageNotesTableReferences
+    extends BaseReferences<_$AppDatabase, $ImageNotesTable, ImageNote> {
+  $$ImageNotesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $GroupPicturesTable _pictureIdTable(_$AppDatabase db) => db
+      .groupPictures
+      .createAlias('image_notes__picture_id__group_pictures__id');
+
+  $$GroupPicturesTableProcessedTableManager get pictureId {
+    final $_column = $_itemColumn<int>('picture_id')!;
+
+    final manager = $$GroupPicturesTableTableManager(
+      $_db,
+      $_db.groupPictures,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_pictureIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ImageNotesTableFilterComposer
+    extends Composer<_$AppDatabase, $ImageNotesTable> {
+  $$ImageNotesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get normalizedX => $composableBuilder(
+    column: $table.normalizedX,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get normalizedY => $composableBuilder(
+    column: $table.normalizedY,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupPicturesTableFilterComposer get pictureId {
+    final $$GroupPicturesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pictureId,
+      referencedTable: $db.groupPictures,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupPicturesTableFilterComposer(
+            $db: $db,
+            $table: $db.groupPictures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ImageNotesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ImageNotesTable> {
+  $$ImageNotesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get normalizedX => $composableBuilder(
+    column: $table.normalizedX,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get normalizedY => $composableBuilder(
+    column: $table.normalizedY,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get content => $composableBuilder(
+    column: $table.content,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupPicturesTableOrderingComposer get pictureId {
+    final $$GroupPicturesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pictureId,
+      referencedTable: $db.groupPictures,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupPicturesTableOrderingComposer(
+            $db: $db,
+            $table: $db.groupPictures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ImageNotesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ImageNotesTable> {
+  $$ImageNotesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get normalizedX => $composableBuilder(
+    column: $table.normalizedX,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get normalizedY => $composableBuilder(
+    column: $table.normalizedY,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$GroupPicturesTableAnnotationComposer get pictureId {
+    final $$GroupPicturesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pictureId,
+      referencedTable: $db.groupPictures,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupPicturesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groupPictures,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ImageNotesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ImageNotesTable,
+          ImageNote,
+          $$ImageNotesTableFilterComposer,
+          $$ImageNotesTableOrderingComposer,
+          $$ImageNotesTableAnnotationComposer,
+          $$ImageNotesTableCreateCompanionBuilder,
+          $$ImageNotesTableUpdateCompanionBuilder,
+          (ImageNote, $$ImageNotesTableReferences),
+          ImageNote,
+          PrefetchHooks Function({bool pictureId})
+        > {
+  $$ImageNotesTableTableManager(_$AppDatabase db, $ImageNotesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ImageNotesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ImageNotesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ImageNotesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> pictureId = const Value.absent(),
+                Value<double> normalizedX = const Value.absent(),
+                Value<double> normalizedY = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => ImageNotesCompanion(
+                id: id,
+                pictureId: pictureId,
+                normalizedX: normalizedX,
+                normalizedY: normalizedY,
+                content: content,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int pictureId,
+                required double normalizedX,
+                required double normalizedY,
+                required String content,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => ImageNotesCompanion.insert(
+                id: id,
+                pictureId: pictureId,
+                normalizedX: normalizedX,
+                normalizedY: normalizedY,
+                content: content,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ImageNotesTable, ImageNote>(table),
+                  $$ImageNotesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({pictureId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (pictureId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.pictureId,
+                                referencedTable: $$ImageNotesTableReferences
+                                    ._pictureIdTable(db),
+                                referencedColumn: $$ImageNotesTableReferences
+                                    ._pictureIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ImageNotesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ImageNotesTable,
+      ImageNote,
+      $$ImageNotesTableFilterComposer,
+      $$ImageNotesTableOrderingComposer,
+      $$ImageNotesTableAnnotationComposer,
+      $$ImageNotesTableCreateCompanionBuilder,
+      $$ImageNotesTableUpdateCompanionBuilder,
+      (ImageNote, $$ImageNotesTableReferences),
+      ImageNote,
+      PrefetchHooks Function({bool pictureId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2529,4 +5057,11 @@ class $AppDatabaseManager {
       $$GroupPicturesTableTableManager(_db, _db.groupPictures);
   $$RecallEventsTableTableManager get recallEvents =>
       $$RecallEventsTableTableManager(_db, _db.recallEvents);
+  $$ImageAnnotationStrokesTableTableManager get imageAnnotationStrokes =>
+      $$ImageAnnotationStrokesTableTableManager(
+        _db,
+        _db.imageAnnotationStrokes,
+      );
+  $$ImageNotesTableTableManager get imageNotes =>
+      $$ImageNotesTableTableManager(_db, _db.imageNotes);
 }
