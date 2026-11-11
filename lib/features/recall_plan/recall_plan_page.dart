@@ -1,15 +1,28 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:recalie/data/local/local_repository.dart';
+import 'package:recalie/features/ads/recalie_native_ad.dart';
 import 'package:recalie/features/photo_groups/memory_set_style.dart';
+import 'package:recalie/features/photo_groups/set_group_assignment.dart';
+import 'package:recalie/features/plans/plan_access.dart';
+import 'package:recalie/features/plans/plans_page.dart';
 import 'package:recalie/features/recall_plan/effective_recall_plan.dart';
+import 'package:recalie/features/recall_plan/movable_note_popup.dart';
 import 'package:recalie/features/recall_plan/recall_review_completion.dart';
 import 'package:recalie/features/recall_plan/subject_text_page.dart';
 
-class RecallPlanPage extends StatelessWidget {
+enum _SetItemType { picture, textPage, attachment }
+
+typedef _SelectedSetItem = ({_SetItemType type, int id});
+
+class RecallPlanPage extends StatefulWidget {
   const RecallPlanPage({
     super.key,
     required this.repository,
@@ -20,8 +33,36 @@ class RecallPlanPage extends StatelessWidget {
   final SavedPictureGroup group;
 
   @override
+  State<RecallPlanPage> createState() => _RecallPlanPageState();
+}
+
+class _RecallPlanPageState extends State<RecallPlanPage> {
+  final Set<_SelectedSetItem> _selectedItems = {};
+
+  LocalRepository get repository => widget.repository;
+  SavedPictureGroup get group => widget.group;
+  bool get _isSelecting => _selectedItems.isNotEmpty;
+
+  void _toggleSelection(_SetItemType type, int id) {
+    final item = (type: type, id: id);
+    setState(() {
+      if (!_selectedItems.remove(item)) _selectedItems.add(item);
+    });
+  }
+
+  bool _isSelected(_SetItemType type, int id) =>
+      _selectedItems.contains((type: type, id: id));
+
+  @override
   Widget build(BuildContext context) {
+    final membershipPlan = RecaliePlanScope.of(context).plan;
     return Scaffold(
+      bottomNavigationBar: !_isSelecting
+          ? null
+          : _DeleteSelectedItemsBar(
+              count: _selectedItems.length,
+              onDelete: _deleteSelectedItems,
+            ),
       body: SafeArea(
         child: StreamBuilder<SavedPictureGroup?>(
           stream: repository.watchPictureGroup(group.id),
@@ -40,53 +81,235 @@ class RecallPlanPage extends StatelessWidget {
               builder: (context, recallSnapshot) {
                 final recalls =
                     recallSnapshot.data ?? const <SavedRecallEvent>[];
-                return ListView(
-                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 40),
-                  children: [
-                    _PlanHeader(
-                      name: subject.name,
-                      onEdit: () => _editMemorySet(context, subject),
-                      onDelete: () => _deleteSubject(context, subject),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'You are recalling ${subject.pictures.length + _textPages(subject.textContent).length} items',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _MemoryImages(
-                      subjectId: subject.id,
-                      pictures: subject.pictures,
-                      onAddPictures: () => _addPictures(context, subject),
-                      onChangePosition: (picture) =>
-                          _changePicturePosition(context, subject, picture),
-                      repository: repository,
-                    ),
-                    const SizedBox(height: 12),
-                    _SubjectTextCard(subject: subject, repository: repository),
-                    const SizedBox(height: 26),
-                    Text(
-                      '${plan.type.label} plan',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _EffectiveCalendar(
-                      plan: plan,
-                      recalls: recalls,
-                      onRecall: (date) =>
-                          _confirmRecall(context, date, plan, subject),
-                    ),
-                  ],
+                return FutureBuilder<RecallItemProgress>(
+                  future: loadCurrentItemProgress(
+                    repository: repository,
+                    subject: subject,
+                  ),
+                  builder: (context, progressSnapshot) {
+                    final progress =
+                        progressSnapshot.data ??
+                        RecallItemProgress(
+                          target:
+                              plan
+                                  .requirementFor(DateTime.now())
+                                  ?.targetRecalls ??
+                              1,
+                          counts: const {},
+                          requirement: plan.requirementFor(DateTime.now()),
+                        );
+                    final pages = _textPages(subject.textContent);
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(18, 12, 18, 40),
+                      children: [
+                        _PlanHeader(
+                          name: subject.name,
+                          selectionMode: _isSelecting,
+                          onBack: () {
+                            if (_isSelecting) {
+                              setState(_selectedItems.clear);
+                            } else {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          onEdit: () => _editMemorySet(context, subject),
+                          onDelete: () => _deleteSubject(context, subject),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'You are recalling ${subject.pictures.length + pages.length + subject.attachments.length} items',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        if (subject.pictures.isNotEmpty) ...[
+                          const SizedBox(height: 18),
+                          const _ContentSectionTitle('Images'),
+                          const SizedBox(height: 8),
+                          _MemoryImages(
+                            subject: subject,
+                            pictures: subject.pictures,
+                            progress: progress,
+                            onChangePosition: (picture) =>
+                                _changePicturePosition(
+                                  context,
+                                  subject,
+                                  picture,
+                                ),
+                            repository: repository,
+                            selectionMode: _isSelecting,
+                            isSelected: (pictureId) =>
+                                _isSelected(_SetItemType.picture, pictureId),
+                            onToggleSelection: (pictureId) => _toggleSelection(
+                              _SetItemType.picture,
+                              pictureId,
+                            ),
+                          ),
+                        ],
+                        if (pages.isNotEmpty) ...[
+                          const SizedBox(height: 18),
+                          const _ContentSectionTitle('Notes'),
+                          const SizedBox(height: 8),
+                          _SubjectTextCard(
+                            subject: subject,
+                            repository: repository,
+                            progress: progress,
+                            selectionMode: _isSelecting,
+                            isSelected: (pageIndex) =>
+                                _isSelected(_SetItemType.textPage, pageIndex),
+                            onToggleSelection: (pageIndex) => _toggleSelection(
+                              _SetItemType.textPage,
+                              pageIndex,
+                            ),
+                          ),
+                        ],
+                        for (final type in const ['file', 'audio', 'video'])
+                          if (subject.attachments.any(
+                            (item) => item.type == type,
+                          )) ...[
+                            const SizedBox(height: 18),
+                            _ContentSectionTitle(_attachmentSectionName(type)),
+                            const SizedBox(height: 8),
+                            _AttachmentGrid(
+                              subject: subject,
+                              attachments: subject.attachments
+                                  .where((item) => item.type == type)
+                                  .toList(),
+                              progress: progress,
+                              repository: repository,
+                              onChangePosition: (attachment) =>
+                                  _changeAttachmentPosition(
+                                    context,
+                                    subject,
+                                    attachment,
+                                  ),
+                              selectionMode: _isSelecting,
+                              isSelected: (attachmentId) => _isSelected(
+                                _SetItemType.attachment,
+                                attachmentId,
+                              ),
+                              onToggleSelection: (attachmentId) =>
+                                  _toggleSelection(
+                                    _SetItemType.attachment,
+                                    attachmentId,
+                                  ),
+                            ),
+                          ],
+                        const RecalieNativeAdCard(
+                          format: RecalieNativeAdFormat.large,
+                          margin: EdgeInsets.symmetric(vertical: 26),
+                        ),
+                        Text(
+                          plan.type.displayName,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 12),
+                        _EffectiveCalendar(
+                          plan: plan,
+                          recalls: recalls,
+                          onRecall: (date) =>
+                              _confirmRecall(context, date, plan, subject),
+                        ),
+                        const SizedBox(height: 22),
+                        _AddItemsPanel(
+                          onPicture: () => _addPictures(context, subject),
+                          onNote: () => _openNotes(context, subject),
+                          richItemTypesLocked:
+                              !membershipPlan.supportsAllItemTypes,
+                          onFile: membershipPlan.supportsAllItemTypes
+                              ? () => _addAttachments(context, subject, 'file')
+                              : () => _requestRichItemsUpgrade(context),
+                          onAudio: membershipPlan.supportsAllItemTypes
+                              ? () => _addAttachments(context, subject, 'audio')
+                              : () => _requestRichItemsUpgrade(context),
+                          onVideo: membershipPlan.supportsAllItemTypes
+                              ? () => _addAttachments(context, subject, 'video')
+                              : () => _requestRichItemsUpgrade(context),
+                        ),
+                      ],
+                    );
+                  },
                 );
               },
             );
           },
         ),
       ),
+    );
+  }
+
+  Future<void> _deleteSelectedItems() async {
+    final subject = await repository.getPictureGroup(group.id);
+    if (subject == null || !mounted) return;
+    final count = _selectedItems.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Delete $count ${count == 1 ? 'item' : 'items'} permanently?',
+        ),
+        content: const Text(
+          'The selected items and their saved notes or drawings will be permanently deleted. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete permanently'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final pictureIds = <int>{
+      for (final item in _selectedItems)
+        if (item.type == _SetItemType.picture) item.id,
+    };
+    final attachmentIds = <int>{
+      for (final item in _selectedItems)
+        if (item.type == _SetItemType.attachment) item.id,
+    };
+    final textPageIndexes = <int>{
+      for (final item in _selectedItems)
+        if (item.type == _SetItemType.textPage) item.id,
+    };
+    await repository.deleteMemorySetItems(
+      pictureGroupId: subject.id,
+      pictureIds: pictureIds,
+      attachmentIds: attachmentIds,
+      textPageIndexes: textPageIndexes,
+    );
+    await deleteItemProgress(
+      repository: repository,
+      subject: subject,
+      pictureIds: pictureIds,
+      attachmentIds: attachmentIds,
+      textPageIndexes: textPageIndexes,
+    );
+    if (!mounted) return;
+    setState(_selectedItems.clear);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '$count ${count == 1 ? 'item was' : 'items were'} deleted.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _requestRichItemsUpgrade(BuildContext context) {
+    return showPlanUpgradePrompt(
+      context,
+      title: 'Unlock every item format',
+      message:
+          'Free supports images and notes. Upgrade to Plus to add files, audio and video.',
     );
   }
 
@@ -143,6 +366,11 @@ class RecallPlanPage extends StatelessWidget {
     var editedNumber = subject.setNumber;
     var selectedType = RecallPlanType.fromStorage(subject.planType);
     var selectedStartDate = dateOnly(subject.planStartDate);
+    var memorySetGroups = await repository.getMemorySetGroups();
+    if (!context.mounted) return;
+    var groupAssignment = subject.memorySetGroupId == null
+        ? const SetGroupAssignment.none()
+        : SetGroupAssignment.existing(subject.memorySetGroupId!);
     final update = await showModalBottomSheet<_MemorySetPlanUpdate>(
       context: context,
       isScrollControlled: true,
@@ -202,7 +430,7 @@ class RecallPlanPage extends StatelessWidget {
                     for (final type in RecallPlanType.values)
                       DropdownMenuItem(
                         value: type,
-                        child: Text('${type.label} plan'),
+                        child: Text(type.displayName),
                       ),
                   ],
                   onChanged: (type) {
@@ -232,6 +460,26 @@ class RecallPlanPage extends StatelessWidget {
                     },
                   ),
                 ),
+                const SizedBox(height: 12),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: const Icon(Icons.folder_copy_outlined),
+                    title: const Text('Set group'),
+                    subtitle: Text(groupAssignment.label(memorySetGroups)),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () async {
+                      final selection = await showSetGroupAssignmentDialog(
+                        context: context,
+                        repository: repository,
+                        initialValue: groupAssignment,
+                      );
+                      if (selection == null || !context.mounted) return;
+                      memorySetGroups = await repository.getMemorySetGroups();
+                      setSheetState(() => groupAssignment = selection);
+                    },
+                  ),
+                ),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
@@ -242,6 +490,7 @@ class RecallPlanPage extends StatelessWidget {
                         setNumber: editedNumber,
                         type: selectedType,
                         startDate: selectedStartDate,
+                        groupAssignment: groupAssignment,
                       ),
                     ),
                     child: const Text('Save memory set'),
@@ -263,6 +512,18 @@ class RecallPlanPage extends StatelessWidget {
         name: update.name,
         planType: update.type.storageValue,
         planStartDate: update.startDate,
+        memorySetGroupId:
+            update.groupAssignment.type == SetGroupAssignmentType.existing
+            ? update.groupAssignment.groupId
+            : null,
+        newMemorySetGroupName:
+            update.groupAssignment.type == SetGroupAssignmentType.newGroup
+            ? update.groupAssignment.newGroupName
+            : null,
+        newMemorySetGroupCover:
+            update.groupAssignment.type == SetGroupAssignmentType.newGroup
+            ? update.groupAssignment.newGroupCover
+            : null,
       );
     } on SetNumberAlreadyUsedException {
       if (context.mounted) {
@@ -331,6 +592,65 @@ class RecallPlanPage extends StatelessWidget {
     }
   }
 
+  Future<void> _openNotes(
+    BuildContext context,
+    SavedPictureGroup subject,
+  ) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SubjectTextPage(
+          repository: repository,
+          subject: subject,
+          startEditing: true,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addAttachments(
+    BuildContext context,
+    SavedPictureGroup subject,
+    String type,
+  ) async {
+    final pickerType = switch (type) {
+      'audio' => FileType.audio,
+      'video' => FileType.video,
+      _ => FileType.any,
+    };
+    final result = await FilePicker.platform.pickFiles(
+      type: pickerType,
+      allowMultiple: true,
+      withData: true,
+    );
+    if (result == null) return;
+    const maximumBytes = 100 * 1024 * 1024;
+    final accepted = <AttachmentDraft>[];
+    var skipped = 0;
+    for (final file in result.files) {
+      final bytes = file.bytes;
+      if (bytes == null || bytes.length > maximumBytes) {
+        skipped++;
+        continue;
+      }
+      accepted.add(AttachmentDraft(displayName: file.name, data: bytes));
+    }
+    if (accepted.isNotEmpty) {
+      await repository.addAttachments(
+        pictureGroupId: subject.id,
+        type: type,
+        attachments: accepted,
+      );
+    }
+    if (!context.mounted) return;
+    final message = accepted.isEmpty
+        ? 'No files were added. Files must be no larger than 100 MB.'
+        : '${accepted.length} ${accepted.length == 1 ? 'item was' : 'items were'} added.'
+              '${skipped == 0 ? '' : ' $skipped oversized item(s) were skipped.'}';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _changePicturePosition(
     BuildContext context,
     SavedPictureGroup subject,
@@ -377,6 +697,55 @@ class RecallPlanPage extends StatelessWidget {
       newPosition: newPosition,
     );
   }
+
+  Future<void> _changeAttachmentPosition(
+    BuildContext context,
+    SavedPictureGroup subject,
+    SavedAttachment attachment,
+  ) async {
+    final sameType = subject.attachments
+        .where((item) => item.type == attachment.type)
+        .toList();
+    final currentIndex = sameType.indexWhere(
+      (item) => item.id == attachment.id,
+    );
+    var enteredPosition = currentIndex + 1;
+    final newPosition = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Change ${attachment.type} order'),
+        content: TextFormField(
+          initialValue: '$enteredPosition',
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onChanged: (value) => enteredPosition = int.tryParse(value) ?? 0,
+          decoration: InputDecoration(
+            labelText: 'Position',
+            suffixText: '/${sameType.length}',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(enteredPosition),
+            child: const Text('Move'),
+          ),
+        ],
+      ),
+    );
+    if (newPosition == null || newPosition < 1) return;
+    await repository.moveAttachment(
+      pictureGroupId: subject.id,
+      attachmentId: attachment.id,
+      type: attachment.type,
+      newPosition: newPosition,
+    );
+  }
 }
 
 class _MemorySetPlanUpdate {
@@ -385,22 +754,28 @@ class _MemorySetPlanUpdate {
     required this.setNumber,
     required this.type,
     required this.startDate,
+    required this.groupAssignment,
   });
 
   final String name;
   final int setNumber;
   final RecallPlanType type;
   final DateTime startDate;
+  final SetGroupAssignment groupAssignment;
 }
 
 class _PlanHeader extends StatelessWidget {
   const _PlanHeader({
     required this.name,
+    required this.selectionMode,
+    required this.onBack,
     required this.onEdit,
     required this.onDelete,
   });
 
   final String name;
+  final bool selectionMode;
+  final VoidCallback onBack;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -410,7 +785,7 @@ class _PlanHeader extends StatelessWidget {
       children: [
         IconButton.filledTonal(
           tooltip: 'Back',
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: onBack,
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         const SizedBox(width: 12),
@@ -429,21 +804,88 @@ class _PlanHeader extends StatelessWidget {
             ],
           ),
         ),
-        IconButton(
-          key: const Key('editSubjectButton'),
-          tooltip: 'Edit memory set',
-          onPressed: onEdit,
-          icon: const Icon(Icons.edit_rounded),
-        ),
-        IconButton(
-          key: const Key('deleteSubjectButton'),
-          tooltip: 'Delete memory set',
-          onPressed: onDelete,
-          icon: const Icon(Icons.delete_outline_rounded),
-        ),
+        if (!selectionMode) ...[
+          IconButton(
+            key: const Key('editSubjectButton'),
+            tooltip: 'Edit memory set',
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_rounded),
+          ),
+          IconButton(
+            key: const Key('deleteSubjectButton'),
+            tooltip: 'Delete memory set',
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline_rounded),
+          ),
+        ],
       ],
     );
   }
+}
+
+class _DeleteSelectedItemsBar extends StatelessWidget {
+  const _DeleteSelectedItemsBar({required this.count, required this.onDelete});
+
+  final int count;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    minimum: const EdgeInsets.fromLTRB(18, 8, 18, 14),
+    child: SizedBox(
+      height: 58,
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.error,
+          foregroundColor: Theme.of(context).colorScheme.onError,
+          shape: const StadiumBorder(),
+        ),
+        onPressed: onDelete,
+        icon: const Icon(Icons.delete_forever_rounded),
+        label: Text(
+          'Delete $count ${count == 1 ? 'item' : 'items'}',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+        ),
+      ),
+    ),
+  );
+}
+
+class _SelectedItemOverlay extends StatelessWidget {
+  const _SelectedItemOverlay();
+
+  @override
+  Widget build(BuildContext context) => Positioned.fill(
+    child: IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.38),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Center(
+          child: Container(
+            width: 62,
+            height: 62,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Theme.of(context).colorScheme.primary,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.22),
+                  blurRadius: 14,
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.check_rounded,
+              color: Theme.of(context).colorScheme.onPrimary,
+              size: 43,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 List<String> _textPages(String? text) {
@@ -451,86 +893,74 @@ List<String> _textPages(String? text) {
   return text.split('\f');
 }
 
-class _SubjectTextCard extends StatefulWidget {
-  const _SubjectTextCard({required this.subject, required this.repository});
+class _SubjectTextCard extends StatelessWidget {
+  const _SubjectTextCard({
+    required this.subject,
+    required this.repository,
+    required this.progress,
+    required this.selectionMode,
+    required this.isSelected,
+    required this.onToggleSelection,
+  });
 
   final SavedPictureGroup subject;
   final LocalRepository repository;
+  final RecallItemProgress progress;
+  final bool selectionMode;
+  final bool Function(int pageIndex) isSelected;
+  final ValueChanged<int> onToggleSelection;
 
-  @override
-  State<_SubjectTextCard> createState() => _SubjectTextCardState();
-}
-
-class _SubjectTextCardState extends State<_SubjectTextCard> {
-  Set<int> _reviewedPages = const {};
-
-  String get _reviewPreferenceKey =>
-      'subject_text_reviewed_${widget.subject.id}';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadReviewedPages();
-  }
-
-  @override
-  void didUpdateWidget(covariant _SubjectTextCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.subject.id != widget.subject.id ||
-        oldWidget.subject.textContent != widget.subject.textContent) {
-      _loadReviewedPages();
-    }
-  }
-
-  Future<void> _loadReviewedPages() async {
-    final value = await widget.repository.readPreference(_reviewPreferenceKey);
-    final reviewed = <int>{};
-    if (value != null && value.isNotEmpty) {
-      for (final part in value.split(',')) {
-        final page = int.tryParse(part);
-        if (page != null) reviewed.add(page);
-      }
-    }
-    if (mounted) setState(() => _reviewedPages = reviewed);
-  }
-
-  Future<void> _openTextPage({required bool startEditing}) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => SubjectTextPage(
-          repository: widget.repository,
-          subject: widget.subject,
-          startEditing: startEditing,
-          initialPage: 0,
+  Future<void> _changePosition(BuildContext context, int index) async {
+    final pages = _textPages(subject.textContent);
+    var enteredPosition = index + 1;
+    final newPosition = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Change note order'),
+        content: TextFormField(
+          initialValue: '$enteredPosition',
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onChanged: (value) => enteredPosition = int.tryParse(value) ?? 0,
+          decoration: InputDecoration(
+            labelText: 'Position',
+            suffixText: '/${pages.length}',
+            border: const OutlineInputBorder(),
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(enteredPosition),
+            child: const Text('Move'),
+          ),
+        ],
       ),
     );
-    await _loadReviewedPages();
+    if (newPosition == null || newPosition < 1) return;
+    await moveSubjectTextPage(
+      repository: repository,
+      subject: subject,
+      oldIndex: index,
+      newPosition: newPosition,
+    );
+  }
+
+  Future<void> _advanceReview(BuildContext context, int index) async {
+    await advanceItemReview(
+      repository: repository,
+      subject: subject,
+      itemKey: textReviewItemKey(index),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final pages = _textPages(widget.subject.textContent);
-    if (pages.isEmpty) {
-      return Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: const Key('subjectTextCard'),
-          onTap: () => _openTextPage(startEditing: true),
-          child: const SizedBox(
-            height: 132,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.note_add_outlined, size: 34),
-                SizedBox(height: 8),
-                Text('Add text pages'),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final pages = _textPages(subject.textContent);
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -545,18 +975,18 @@ class _SubjectTextCardState extends State<_SubjectTextCard> {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           key: index == 0 ? const Key('subjectTextCard') : null,
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => SubjectTextPage(
-                  repository: widget.repository,
-                  subject: widget.subject,
-                  initialPage: index,
+          onLongPress: () => onToggleSelection(index),
+          onTap: selectionMode
+              ? () => onToggleSelection(index)
+              : () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SubjectTextPage(
+                      repository: repository,
+                      subject: subject,
+                      initialPage: index,
+                    ),
+                  ),
                 ),
-              ),
-            );
-            await _loadReviewedPages();
-          },
           child: Stack(
             children: [
               Positioned.fill(
@@ -580,30 +1010,320 @@ class _SubjectTextCardState extends State<_SubjectTextCard> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _ImageStatusCircle(
-                      child: Text(
-                        '${index + 1}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: selectionMode
+                          ? () => onToggleSelection(index)
+                          : () => _changePosition(context, index),
+                      child: _ImageStatusCircle(
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ),
-                    if (_reviewedPages.contains(index)) ...[
-                      const SizedBox(width: 5),
-                      const _ImageStatusCircle(
-                        child: Icon(
-                          Icons.check_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
+                    const SizedBox(width: 5),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: selectionMode
+                          ? () => onToggleSelection(index)
+                          : () => _advanceReview(context, index),
+                      child: _ReviewProgressCircle(
+                        count: progress.countFor(textReviewItemKey(index)),
+                        target: progress.target,
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
+              if (isSelected(index)) const _SelectedItemOverlay(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ContentSectionTitle extends StatelessWidget {
+  const _ContentSectionTitle(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    label,
+    style: Theme.of(
+      context,
+    ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+  );
+}
+
+String _attachmentSectionName(String type) => switch (type) {
+  'audio' => 'Audio',
+  'video' => 'Videos',
+  _ => 'Files',
+};
+
+IconData _attachmentIcon(String type) => switch (type) {
+  'audio' => Icons.headphones_rounded,
+  'video' => Icons.movie_rounded,
+  _ => Icons.insert_drive_file_rounded,
+};
+
+class _AttachmentGrid extends StatelessWidget {
+  const _AttachmentGrid({
+    required this.subject,
+    required this.attachments,
+    required this.progress,
+    required this.repository,
+    required this.onChangePosition,
+    required this.selectionMode,
+    required this.isSelected,
+    required this.onToggleSelection,
+  });
+
+  final SavedPictureGroup subject;
+  final List<SavedAttachment> attachments;
+  final RecallItemProgress progress;
+  final LocalRepository repository;
+  final ValueChanged<SavedAttachment> onChangePosition;
+  final bool selectionMode;
+  final bool Function(int attachmentId) isSelected;
+  final ValueChanged<int> onToggleSelection;
+
+  static const _androidAttachmentChannel = MethodChannel(
+    'com.example.recalie/attachments',
+  );
+
+  Future<void> _openAttachment(
+    BuildContext context,
+    SavedAttachment attachment,
+  ) async {
+    try {
+      final directory = await getTemporaryDirectory();
+      final safeName = attachment.displayName
+          .replaceAll(RegExp(r'[^A-Za-z0-9._ -]'), '_')
+          .trim();
+      final fileName = safeName.isEmpty
+          ? 'recalie_attachment_${attachment.id}'
+          : 'recalie_${attachment.id}_$safeName';
+      final file = File('${directory.path}${Platform.pathSeparator}$fileName');
+      await file.writeAsBytes(attachment.data, flush: true);
+      if (Platform.isAndroid) {
+        await _androidAttachmentChannel.invokeMethod<void>('openFile', {
+          'path': file.path,
+        });
+      } else {
+        final result = await OpenFilex.open(file.path);
+        if (result.type != ResultType.done) {
+          throw StateError(
+            result.message.isEmpty
+                ? 'No compatible app could open this item.'
+                : result.message,
+          );
+        }
+      }
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open this item: $error')),
+      );
+    }
+  }
+
+  Future<void> _advanceReview(
+    BuildContext context,
+    SavedAttachment attachment,
+  ) async {
+    final itemKey = attachmentReviewItemKey(attachment.id);
+    final updated = await advanceItemReview(
+      repository: repository,
+      subject: subject,
+      itemKey: itemKey,
+    );
+    if (!context.mounted) return;
+    final updatedCount = updated.countFor(itemKey);
+    final label = updatedCount >= updated.target
+        ? 'Reviewed'
+        : '$updatedCount/${updated.target} reviews';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${attachment.displayName}: $label')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => GridView.builder(
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: attachments.length,
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 2,
+      crossAxisSpacing: 10,
+      mainAxisSpacing: 10,
+    ),
+    itemBuilder: (context, index) {
+      final attachment = attachments[index];
+      final itemKey = attachmentReviewItemKey(attachment.id);
+      final count = progress.countFor(itemKey);
+      return Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onLongPress: () => onToggleSelection(attachment.id),
+          onTap: selectionMode
+              ? () => onToggleSelection(attachment.id)
+              : () => _openAttachment(context, attachment),
+          child: Stack(
+            children: [
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 42, 14, 16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _attachmentIcon(attachment.type),
+                        size: 42,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        attachment.displayName,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 7,
+                top: 7,
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: selectionMode
+                          ? () => onToggleSelection(attachment.id)
+                          : () => onChangePosition(attachment),
+                      child: _ImageStatusCircle(
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: selectionMode
+                          ? () => onToggleSelection(attachment.id)
+                          : () => _advanceReview(context, attachment),
+                      child: _ReviewProgressCircle(
+                        count: count,
+                        target: progress.target,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected(attachment.id)) const _SelectedItemOverlay(),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _ReviewProgressCircle extends StatelessWidget {
+  const _ReviewProgressCircle({required this.count, required this.target});
+
+  final int count;
+  final int target;
+
+  @override
+  Widget build(BuildContext context) => _ImageStatusCircle(
+    backgroundColor: count == 0
+        ? Colors.black.withValues(alpha: 0.28)
+        : memoryNumberCircleColor,
+    child: count == 0
+        ? const SizedBox.shrink()
+        : count >= target
+        ? const Icon(Icons.check_rounded, color: Colors.white, size: 18)
+        : Text(
+            '$count/$target',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+  );
+}
+
+class _AddItemsPanel extends StatelessWidget {
+  const _AddItemsPanel({
+    required this.onPicture,
+    required this.onNote,
+    required this.richItemTypesLocked,
+    required this.onFile,
+    required this.onAudio,
+    required this.onVideo,
+  });
+
+  final VoidCallback onPicture;
+  final VoidCallback onNote;
+  final bool richItemTypesLocked;
+  final VoidCallback onFile;
+  final VoidCallback onAudio;
+  final VoidCallback onVideo;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = [
+      (Icons.add_photo_alternate_rounded, 'Picture', onPicture, false),
+      (Icons.note_add_rounded, 'Note', onNote, false),
+      (Icons.insert_drive_file_rounded, 'File', onFile, richItemTypesLocked),
+      (Icons.audio_file_rounded, 'Audio', onAudio, richItemTypesLocked),
+      (Icons.video_file_rounded, 'Video', onVideo, richItemTypesLocked),
+    ];
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Add',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            for (var index = 0; index < options.length; index++) ...[
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                leading: Icon(options[index].$1),
+                title: Text(options[index].$2),
+                trailing: Icon(
+                  options[index].$4 ? Icons.lock_rounded : Icons.add_rounded,
+                ),
+                onTap: options[index].$3,
+              ),
+              if (index != options.length - 1) const Divider(height: 1),
+            ],
+          ],
         ),
       ),
     );
@@ -923,65 +1643,61 @@ class _CalendarDay extends StatelessWidget {
 
 class _MemoryImages extends StatelessWidget {
   const _MemoryImages({
-    required this.subjectId,
+    required this.subject,
     required this.pictures,
-    required this.onAddPictures,
+    required this.progress,
     required this.onChangePosition,
     required this.repository,
+    required this.selectionMode,
+    required this.isSelected,
+    required this.onToggleSelection,
   });
 
-  final int subjectId;
+  final SavedPictureGroup subject;
   final List<SavedPicture> pictures;
-  final VoidCallback onAddPictures;
+  final RecallItemProgress progress;
   final ValueChanged<SavedPicture> onChangePosition;
   final LocalRepository repository;
+  final bool selectionMode;
+  final bool Function(int pictureId) isSelected;
+  final ValueChanged<int> onToggleSelection;
+
+  Future<void> _advanceReview(SavedPicture picture) {
+    return advanceItemReview(
+      repository: repository,
+      subject: subject,
+      itemKey: imageReviewItemKey(picture.id),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: pictures.length + 1,
+      itemCount: pictures.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
       ),
       itemBuilder: (context, index) {
-        if (index == pictures.length) {
-          return Card(
-            margin: EdgeInsets.zero,
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              key: const Key('addSubjectPicturesButton'),
-              onTap: onAddPictures,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.add_photo_alternate_outlined,
-                    size: 38,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text('Add pictures'),
-                ],
-              ),
-            ),
-          );
-        }
         final picture = pictures[index];
+        final reviewCount = progress.countFor(imageReviewItemKey(picture.id));
         return InkWell(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => _MemoryImageViewer(
-                subjectId: subjectId,
-                pictures: pictures,
-                initialIndex: index,
-                repository: repository,
-              ),
-            ),
-          ),
+          onLongPress: () => onToggleSelection(picture.id),
+          onTap: selectionMode
+              ? () => onToggleSelection(picture.id)
+              : () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => _MemoryImageViewer(
+                      subjectId: subject.id,
+                      pictures: pictures,
+                      initialIndex: index,
+                      repository: repository,
+                    ),
+                  ),
+                ),
           borderRadius: BorderRadius.circular(18),
           child: Stack(
             children: [
@@ -1001,7 +1717,9 @@ class _MemoryImages extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     GestureDetector(
-                      onTap: () => onChangePosition(picture),
+                      onTap: selectionMode
+                          ? () => onToggleSelection(picture.id)
+                          : () => onChangePosition(picture),
                       child: _ImageStatusCircle(
                         child: Text(
                           '${index + 1}',
@@ -1012,19 +1730,21 @@ class _MemoryImages extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (picture.isReviewed) ...[
-                      const SizedBox(width: 5),
-                      const _ImageStatusCircle(
-                        child: Icon(
-                          Icons.check_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
+                    const SizedBox(width: 5),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: selectionMode
+                          ? () => onToggleSelection(picture.id)
+                          : () => _advanceReview(picture),
+                      child: _ReviewProgressCircle(
+                        count: reviewCount,
+                        target: progress.target,
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
+              if (isSelected(picture.id)) const _SelectedItemOverlay(),
             ],
           ),
         );
@@ -1055,6 +1775,7 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
     initialPage: widget.initialIndex,
   );
   late final List<SavedPicture> _pictures = [...widget.pictures];
+  final ScrollController _thumbnailController = ScrollController();
   final Map<int, TransformationController> _transformControllers = {};
   final Map<int, List<_ImageStroke>> _strokes = {};
   final Map<int, List<SavedImageNote>> _notes = {};
@@ -1078,6 +1799,9 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
   Color _drawingColor = Colors.red;
   final List<List<_ImageStroke>> _undoHistory = [];
   final List<List<_ImageStroke>> _redoHistory = [];
+  bool _controlsVisible = true;
+  SavedPictureGroup? _subject;
+  RecallItemProgress? _reviewProgress;
 
   @override
   void initState() {
@@ -1085,6 +1809,21 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
     _loadAnnotations();
     _loadNotes();
     _loadImageSize(widget.initialIndex);
+    _loadReviewProgress();
+  }
+
+  Future<void> _loadReviewProgress() async {
+    final subject = await widget.repository.getPictureGroup(widget.subjectId);
+    if (subject == null) return;
+    final progress = await loadCurrentItemProgress(
+      repository: widget.repository,
+      subject: subject,
+    );
+    if (!mounted) return;
+    setState(() {
+      _subject = subject;
+      _reviewProgress = progress;
+    });
   }
 
   Future<void> _loadNotes() async {
@@ -1445,6 +2184,7 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
         normalizedX: normalizedPosition.dx,
         normalizedY: normalizedPosition.dy,
         content: result.content,
+        images: result.images,
       );
       if (!mounted) return;
       setState(() {
@@ -1472,12 +2212,21 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
           ),
         );
       } else {
-        await widget.repository.updateImageNote(note.id, result.content);
+        await widget.repository.updateImageNote(
+          note.id,
+          result.content,
+          images: result.images,
+        );
         if (!mounted) return;
         final notes = _notes[note.pictureId];
         final index = notes?.indexWhere((savedNote) => savedNote.id == note.id);
         if (notes != null && index != null && index >= 0) {
-          setState(() => notes[index] = note.copyWith(content: result.content));
+          setState(
+            () => notes[index] = note.copyWith(
+              content: result.content,
+              images: result.images,
+            ),
+          );
         }
       }
     } catch (error) {
@@ -1488,8 +2237,42 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
     }
   }
 
+  Future<void> _showNote(SavedImageNote note, Offset anchor) {
+    return showMovableNotePopup(
+      context: context,
+      anchor: anchor,
+      content: note.content,
+      images: note.images,
+    );
+  }
+
+  void _moveNote(SavedImageNote note, Offset position) {
+    final notes = _notes[note.pictureId];
+    final index = notes?.indexWhere((saved) => saved.id == note.id) ?? -1;
+    if (notes == null || index < 0) return;
+    setState(() {
+      notes[index] = note.copyWith(
+        normalizedX: position.dx,
+        normalizedY: position.dy,
+      );
+    });
+  }
+
+  Future<void> _saveNotePosition(SavedImageNote note) async {
+    final notes = _notes[note.pictureId];
+    final index = notes?.indexWhere((saved) => saved.id == note.id) ?? -1;
+    if (notes == null || index < 0) return;
+    final current = notes[index];
+    await widget.repository.updateImageNotePosition(
+      noteId: current.id,
+      normalizedX: current.normalizedX,
+      normalizedY: current.normalizedY,
+    );
+  }
+
   Future<_NoteEditorResult?> _showNoteEditor({SavedImageNote? note}) {
     var draft = note?.content ?? '';
+    final draftImages = <Uint8List>[...?note?.images];
     return showModalBottomSheet<_NoteEditorResult>(
       context: context,
       isScrollControlled: true,
@@ -1546,6 +2329,48 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (value) => setSheetState(() => draft = value),
+                      contentInsertionConfiguration:
+                          ContentInsertionConfiguration(
+                            allowedMimeTypes: const [
+                              'image/png',
+                              'image/jpeg',
+                              'image/gif',
+                              'image/webp',
+                            ],
+                            onContentInserted: (content) {
+                              final bytes = content.data;
+                              if (bytes != null && bytes.isNotEmpty) {
+                                setSheetState(() => draftImages.add(bytes));
+                              }
+                            },
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (draftImages.isNotEmpty) ...[
+                      _NoteImageEditorStrip(
+                        images: draftImages,
+                        onRemove: (index) =>
+                            setSheetState(() => draftImages.removeAt(index)),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final photos = await ImagePicker().pickMultiImage(
+                            imageQuality: 85,
+                            maxWidth: 2048,
+                          );
+                          if (photos.isEmpty) return;
+                          final images = await Future.wait(
+                            photos.map((photo) => photo.readAsBytes()),
+                          );
+                          setSheetState(() => draftImages.addAll(images));
+                        },
+                        icon: const Icon(Icons.add_photo_alternate_rounded),
+                        label: const Text('Add photos'),
+                      ),
                     ),
                     const SizedBox(height: 14),
                     Row(
@@ -1563,12 +2388,13 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                           ),
                         const Spacer(),
                         FilledButton(
-                          onPressed: draft.trim().isEmpty
+                          onPressed: draft.trim().isEmpty && draftImages.isEmpty
                               ? null
                               : () => Navigator.of(sheetContext).pop(
                                   _NoteEditorResult(
                                     action: _NoteEditorAction.save,
                                     content: draft.trim(),
+                                    images: List.of(draftImages),
                                   ),
                                 ),
                           child: const Text('Save note'),
@@ -1648,33 +2474,114 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
 
   Future<void> _toggleReviewed() async {
     final picture = _pictures[_currentIndex];
-    final reviewed = !picture.isReviewed;
-    await widget.repository.setPictureReviewed(picture.id, reviewed);
+    final subject =
+        _subject ?? await widget.repository.getPictureGroup(widget.subjectId);
+    if (subject == null) return;
+    final updated = await advanceItemReview(
+      repository: widget.repository,
+      subject: subject,
+      itemKey: imageReviewItemKey(picture.id),
+    );
     if (!mounted) return;
-    setState(() {
-      _pictures[_currentIndex] = SavedPicture(
-        id: picture.id,
-        bytes: picture.bytes,
-        position: picture.position,
-        isReviewed: reviewed,
-      );
-    });
-    if (reviewed) {
-      final completed = await completeTodayIfEveryItemIsReviewed(
-        repository: widget.repository,
-        subjectId: widget.subjectId,
-      );
-      if (completed && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Today\'s recall is complete.')),
-        );
-      }
+    setState(() => _reviewProgress = updated);
+  }
+
+  void _toggleControls() {
+    if (_drawingMode || _coverMode || _noteMode) return;
+    setState(() => _controlsVisible = !_controlsVisible);
+  }
+
+  void _showImageAt(int index) {
+    if (index == _currentIndex) return;
+    _controller.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _centerSelectedThumbnail() {
+    if (!_thumbnailController.hasClients) return;
+    const itemExtent = 60.0;
+    final viewport = _thumbnailController.position.viewportDimension;
+    final target = (_currentIndex * itemExtent - (viewport - 52) / 2).clamp(
+      0.0,
+      _thumbnailController.position.maxScrollExtent,
+    );
+    _thumbnailController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _deleteCurrentPicture() async {
+    final picture = _pictures[_currentIndex];
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this image permanently?'),
+        content: const Text(
+          'The image, its drawings, and its notes will be permanently deleted. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete permanently'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await widget.repository.deletePicture(
+      pictureGroupId: widget.subjectId,
+      pictureId: picture.id,
+    );
+    if (!mounted) return;
+    for (final controller in _transformControllers.values) {
+      controller.dispose();
     }
+    _transformControllers.clear();
+    _strokes.remove(picture.id);
+    _notes.remove(picture.id);
+    _imageSizes.remove(picture.id);
+    setState(() {
+      _pictures.removeAt(_currentIndex);
+      if (_pictures.isNotEmpty) {
+        _currentIndex = _currentIndex.clamp(0, _pictures.length - 1);
+        _currentImageZoomed = false;
+      }
+    });
+    if (_pictures.isEmpty) {
+      Navigator.of(context).pop();
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _controller.jumpToPage(_currentIndex);
+      _loadImageSize(_currentIndex);
+      _centerSelectedThumbnail();
+    });
+  }
+
+  void _openFutureAiTools() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('AI image tools are coming later.')),
+    );
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _thumbnailController.dispose();
     for (final controller in _transformControllers.values) {
       controller.dispose();
     }
@@ -1685,61 +2592,6 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        leadingWidth: 58,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: const _ImageStatusCircle(
-              size: 46,
-              child: Icon(
-                Icons.arrow_back_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          _ViewerToolCapsule(
-            noteMode: _noteMode,
-            drawingMode: _drawingMode,
-            coverMode: _coverMode,
-            savingDrawings: _savingDrawings,
-            onDrawingTap: _savingDrawings
-                ? null
-                : (_drawingMode ? _saveDrawingEdits : _openDrawingEditor),
-            onCoverTap: _toggleCoverTool,
-            onNoteTap: _toggleNoteTool,
-          ),
-          const SizedBox(width: 7),
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: _toggleReviewed,
-              child: _ImageStatusCircle(
-                size: 46,
-                child: _pictures[_currentIndex].isReviewed
-                    ? const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 29,
-                      )
-                    : Text(
-                        '${_currentIndex + 1}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-              ),
-            ),
-          ),
-        ],
-      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -1757,6 +2609,9 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                   _currentImageZoomed =
                       transform.value.getMaxScaleOnAxis() > 1.01;
                 });
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => _centerSelectedThumbnail(),
+                );
               },
               itemCount: _pictures.length,
               itemBuilder: (context, index) => LayoutBuilder(
@@ -1766,6 +2621,8 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                     constraints.maxHeight,
                   );
                   return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _toggleControls,
                     onDoubleTapDown: (details) =>
                         _handleDoubleTap(index, details),
                     child: InteractiveViewer(
@@ -1846,7 +2703,12 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                                   ),
                                   onCreate: (position) =>
                                       _addNoteAt(index, position),
-                                  onOpen: _openNote,
+                                  editing: _noteMode,
+                                  onOpen: (note, anchor) => _noteMode
+                                      ? _openNote(note)
+                                      : _showNote(note, anchor),
+                                  onMoved: _moveNote,
+                                  onMoveEnd: _saveNotePosition,
                                 ),
                             ],
                           ),
@@ -1858,9 +2720,77 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
               ),
             ),
           ),
+          if (_controlsVisible)
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 8,
+              left: 12,
+              right: 12,
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: const _ImageStatusCircle(
+                      size: 46,
+                      child: Icon(
+                        Icons.arrow_back_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  _ViewerToolCapsule(
+                    noteMode: _noteMode,
+                    drawingMode: _drawingMode,
+                    coverMode: _coverMode,
+                    savingDrawings: _savingDrawings,
+                    onDrawingTap: _savingDrawings
+                        ? null
+                        : (_drawingMode
+                              ? _saveDrawingEdits
+                              : _openDrawingEditor),
+                    onCoverTap: _toggleCoverTool,
+                    onNoteTap: _toggleNoteTool,
+                  ),
+                  const SizedBox(width: 7),
+                  GestureDetector(
+                    onTap: _toggleReviewed,
+                    child: _ImageStatusCircle(
+                      size: 46,
+                      child:
+                          (_reviewProgress?.isComplete(
+                                imageReviewItemKey(_pictures[_currentIndex].id),
+                              ) ??
+                              false)
+                          ? const Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: 29,
+                            )
+                          : Text(
+                              (_reviewProgress?.countFor(
+                                            imageReviewItemKey(
+                                              _pictures[_currentIndex].id,
+                                            ),
+                                          ) ??
+                                          0) >
+                                      0
+                                  ? '${_reviewProgress!.countFor(imageReviewItemKey(_pictures[_currentIndex].id))}/${_reviewProgress!.target}'
+                                  : '${_currentIndex + 1}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (_coverMode)
             Positioned(
-              top: 10,
+              top: MediaQuery.paddingOf(context).top + 64,
               left: 12,
               right: 12,
               child: Row(
@@ -1933,19 +2863,195 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                 onRedo: _redoDrawing,
               ),
             ),
+          if (_controlsVisible && !_drawingMode && !_coverMode && !_noteMode)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 12 + MediaQuery.paddingOf(context).bottom,
+              child: _ImageViewerBottomControls(
+                pictures: _pictures,
+                currentIndex: _currentIndex,
+                controller: _thumbnailController,
+                onImageSelected: _showImageAt,
+                onDelete: _deleteCurrentPicture,
+                onAi: _openFutureAiTools,
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
+class _ImageViewerBottomControls extends StatelessWidget {
+  const _ImageViewerBottomControls({
+    required this.pictures,
+    required this.currentIndex,
+    required this.controller,
+    required this.onImageSelected,
+    required this.onDelete,
+    required this.onAi,
+  });
+
+  final List<SavedPicture> pictures;
+  final int currentIndex;
+  final ScrollController controller;
+  final ValueChanged<int> onImageSelected;
+  final VoidCallback onDelete;
+  final VoidCallback onAi;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        height: 46,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: memoryNumberCircleColor,
+          borderRadius: BorderRadius.circular(23),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black38,
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ViewerBottomAction(
+              tooltip: 'Delete image',
+              icon: Icons.delete_outline_rounded,
+              onTap: onDelete,
+            ),
+            Container(width: 1, height: 24, color: Colors.white30),
+            _ViewerBottomAction(
+              tooltip: 'AI image tools',
+              icon: Icons.auto_awesome_rounded,
+              onTap: onAi,
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 9),
+      SizedBox(
+        height: 64,
+        child: ListView.separated(
+          controller: controller,
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          itemCount: pictures.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final selected = index == currentIndex;
+            return GestureDetector(
+              onTap: () => onImageSelected(index),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                width: 52,
+                padding: EdgeInsets.all(selected ? 3 : 0),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? memoryNumberCircleColor
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    pictures[index].bytes,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    ],
+  );
+}
+
+class _ViewerBottomAction extends StatelessWidget {
+  const _ViewerBottomAction({
+    required this.tooltip,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: SizedBox.square(
+        dimension: 42,
+        child: Icon(icon, color: Colors.white, size: 23),
+      ),
+    ),
+  );
+}
+
 enum _NoteEditorAction { save, delete }
 
 class _NoteEditorResult {
-  const _NoteEditorResult({required this.action, required this.content});
+  const _NoteEditorResult({
+    required this.action,
+    required this.content,
+    this.images = const [],
+  });
 
   final _NoteEditorAction action;
   final String content;
+  final List<Uint8List> images;
+}
+
+class _NoteImageEditorStrip extends StatelessWidget {
+  const _NoteImageEditorStrip({required this.images, required this.onRemove});
+
+  final List<Uint8List> images;
+  final ValueChanged<int> onRemove;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 150,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: images.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) => Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.memory(
+              images[index],
+              width: 170,
+              height: 150,
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned(
+            right: 4,
+            top: 4,
+            child: IconButton.filled(
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Remove image',
+              onPressed: () => onRemove(index),
+              icon: const Icon(Icons.close_rounded, size: 18),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _ImageNotesOverlay extends StatelessWidget {
@@ -1956,7 +3062,10 @@ class _ImageNotesOverlay extends StatelessWidget {
     required this.draftPosition,
     required this.onDraftMoved,
     required this.onCreate,
+    required this.editing,
     required this.onOpen,
+    required this.onMoved,
+    required this.onMoveEnd,
   });
 
   final Rect imageRect;
@@ -1965,7 +3074,10 @@ class _ImageNotesOverlay extends StatelessWidget {
   final Offset draftPosition;
   final ValueChanged<Offset> onDraftMoved;
   final ValueChanged<Offset> onCreate;
-  final ValueChanged<SavedImageNote> onOpen;
+  final bool editing;
+  final void Function(SavedImageNote note, Offset anchor) onOpen;
+  final void Function(SavedImageNote note, Offset position) onMoved;
+  final ValueChanged<SavedImageNote> onMoveEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -2027,21 +3139,37 @@ class _ImageNotesOverlay extends StatelessWidget {
                     .clamp(imageRect.top, imageRect.bottom - iconSize),
             child: Tooltip(
               message: note.content,
-              child: Material(
-                color: memoryNumberCircleColor,
-                elevation: 4,
-                shadowColor: Colors.black54,
-                shape: const CircleBorder(),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => onOpen(note),
-                  customBorder: const CircleBorder(),
-                  child: const SizedBox.square(
-                    dimension: iconSize,
-                    child: Icon(
-                      Icons.sticky_note_2_rounded,
-                      color: Colors.white,
-                      size: 21,
+              child: GestureDetector(
+                onPanUpdate: !editing
+                    ? null
+                    : (details) => onMoved(
+                        note,
+                        Offset(
+                          (note.normalizedX +
+                                  details.delta.dx / imageRect.width)
+                              .clamp(0.0, 1.0),
+                          (note.normalizedY +
+                                  details.delta.dy / imageRect.height)
+                              .clamp(0.0, 1.0),
+                        ),
+                      ),
+                onPanEnd: !editing ? null : (_) => onMoveEnd(note),
+                child: Material(
+                  color: memoryNumberCircleColor,
+                  elevation: 4,
+                  shadowColor: Colors.black54,
+                  shape: const CircleBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTapUp: (details) => onOpen(note, details.globalPosition),
+                    customBorder: const CircleBorder(),
+                    child: const SizedBox.square(
+                      dimension: iconSize,
+                      child: Icon(
+                        Icons.sticky_note_2_rounded,
+                        color: Colors.white,
+                        size: 21,
+                      ),
                     ),
                   ),
                 ),
@@ -2088,7 +3216,10 @@ class _ViewerToolCapsule extends StatelessWidget {
             tooltip: 'Image notes',
             selected: noteMode,
             onTap: onNoteTap,
-            child: const Icon(Icons.note_add_rounded, size: 23),
+            child: Icon(
+              noteMode ? Icons.check_rounded : Icons.note_add_rounded,
+              size: noteMode ? 27 : 23,
+            ),
           ),
           Container(width: 1, height: 24, color: Colors.white30),
           _ViewerToolButton(
@@ -2519,14 +3650,18 @@ class _PartialCoverPainter extends CustomPainter {
       );
       handleCenter = Offset(size.width / 2, boundary);
     }
-    canvas.drawCircle(
-      handleCenter,
-      13,
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: handleCenter, width: 16, height: 32),
+        const Radius.circular(8),
+      ),
       Paint()..color = const Color(0xFF102F70),
     );
-    canvas.drawCircle(
-      handleCenter,
-      6,
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: handleCenter, width: 7, height: 21),
+        const Radius.circular(4),
+      ),
       Paint()..color = const Color(0xFF93C5FD),
     );
   }
@@ -3055,10 +4190,15 @@ class _ToolbarSlider extends StatelessWidget {
 }
 
 class _ImageStatusCircle extends StatelessWidget {
-  const _ImageStatusCircle({required this.child, this.size = 34});
+  const _ImageStatusCircle({
+    required this.child,
+    this.size = 34,
+    this.backgroundColor,
+  });
 
   final Widget child;
   final double size;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -3068,7 +4208,7 @@ class _ImageStatusCircle extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: memoryNumberCircleColor,
+        color: backgroundColor ?? memoryNumberCircleColor,
       ),
       child: child,
     );

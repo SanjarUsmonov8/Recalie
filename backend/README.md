@@ -24,7 +24,12 @@ Endpoints:
 - `GET /api/v1/health/`
 - `GET /api/v1/catalog/subjects/`
 - `GET /api/v1/catalog/subjects/{slug}/`
+- `POST /api/v1/ai/session/`
+- `POST /api/v1/ai/chat/` (requires the returned device bearer token)
 - `/admin/` for editing catalog content
+
+The Gemini key belongs only in `backend/.env` locally and
+`/opt/recalie/backend/.env` on the server. Never place it in Flutter code.
 
 ## Deployment order
 

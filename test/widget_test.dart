@@ -27,6 +27,7 @@ void main() {
       RecalieApp(
         database: database,
         showPictureGroups: false,
+        enableAds: false,
         catalogApiClient: _catalogApiClient,
       ),
     );
@@ -36,15 +37,17 @@ void main() {
     expect(find.byKey(const Key('recalieAddButton')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('recalieNavDiscover')));
-    await tester.pumpAndSettle();
+    // Native ads complete on the platform side, so waiting for every possible
+    // frame to settle is not appropriate in a widget test.
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Discover'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('recalieNavAi')));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('AI Coach'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
+    await tester.pumpAndSettle();
     await database.close();
   });
 
@@ -69,7 +72,86 @@ void main() {
     expect(app.themeMode, ThemeMode.dark);
 
     await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await database.close();
+  });
+
+  testWidgets('plans page changes and persists the membership plan', (
+    tester,
+  ) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    await tester.pumpWidget(
+      RecalieApp(
+        database: database,
+        showPictureGroups: false,
+        catalogApiClient: _catalogApiClient,
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('premiumButton')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose your plan'), findsOneWidget);
+    expect(find.text(r'$1.99 / month'), findsOneWidget);
+    expect(find.text(r'$4.99 / month'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Choose Plus'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose Plus'));
+    await tester.pumpAndSettle();
+
+    final preference = await (database.select(
+      database.appPreferences,
+    )..where((row) => row.key.equals('membership_plan'))).getSingle();
+    expect(preference.value, 'plus');
+    final expiryPreference =
+        await (database.select(database.appPreferences)
+              ..where((row) => row.key.equals('membership_plan_expires_at')))
+            .getSingle();
+    final expiry = DateTime.parse(expiryPreference.value);
+    expect(expiry.isAfter(DateTime.now()), isTrue);
+    expect(find.text('Choose Plus'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await database.close();
+  });
+
+  testWidgets('profile page edits and persists the user name', (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    await tester.pumpWidget(
+      RecalieApp(
+        database: database,
+        showPictureGroups: false,
+        catalogApiClient: _catalogApiClient,
+      ),
+    );
+    await tester.tap(find.byKey(const Key('profileButton')).hitTestable());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your Name'), findsOneWidget);
+    expect(find.text('Sets'), findsOneWidget);
+    expect(find.text('Plan'), findsOneWidget);
+    expect(find.text('Active until'), findsOneWidget);
+    expect(find.byKey(const Key('walnutProfileCard')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('editProfileButton')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('profileNameField')),
+      'Ada Lovelace',
+    );
+    await tester.tap(find.text('Save'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Ada Lovelace'), findsOneWidget);
+    final preference = await (database.select(
+      database.appPreferences,
+    )..where((row) => row.key.equals('profile_name'))).getSingle();
+    expect(preference.value, 'Ada Lovelace');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
     await database.close();
   });
 }

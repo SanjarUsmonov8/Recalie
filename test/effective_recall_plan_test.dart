@@ -58,6 +58,26 @@ void main() {
     );
   });
 
+  test('Hermann Ebbinghaus special follows historical curve checkpoints', () {
+    final plan = EffectiveRecallPlan(
+      DateTime(2026, 10, 5),
+      type: RecallPlanType.ebbinghausSpecial,
+    );
+    final exact = plan.requirements
+        .where((item) => !item.isFlexibleWeek)
+        .toList();
+    final weekly = plan.requirements
+        .where((item) => item.isFlexibleWeek)
+        .toList();
+
+    expect(
+      exact.map((item) => item.start.difference(plan.startDate).inDays),
+      EffectiveRecallPlan.ebbinghausSpecialDailyOffsets,
+    );
+    expect(exact.map((item) => item.targetRecalls), [3, 1, 1, 1, 1]);
+    expect(weekly, isEmpty);
+  });
+
   test('Fast plan concentrates recalls into a shorter schedule', () {
     final plan = EffectiveRecallPlan(
       DateTime(2026, 10, 5),
@@ -91,6 +111,44 @@ void main() {
       weekly.map((item) => item.start.difference(firstWeekly).inDays ~/ 7),
       EffectiveRecallPlan.fastMandatoryWeekOffsets,
     );
+  });
+
+  test('Sanjar Usmonov special uses only weekly increasing gaps', () {
+    final plan = EffectiveRecallPlan(
+      DateTime(2026, 10, 7),
+      type: RecallPlanType.sanjarUsmonovSpecial,
+    );
+
+    expect(
+      plan.requirements.every((requirement) => requirement.isFlexibleWeek),
+      isTrue,
+    );
+    expect(
+      plan.requirements.map(
+        (requirement) =>
+            requirement.start
+                .difference(plan.requirements.first.start)
+                .inDays ~/
+            7,
+      ),
+      EffectiveRecallPlan.sanjarUsmonovSpecialMandatoryWeekOffsets,
+    );
+    expect(EffectiveRecallPlan.sanjarUsmonovSpecialMandatoryWeekOffsets, [
+      0,
+      1,
+      2,
+      4,
+      6,
+      9,
+      12,
+      16,
+    ]);
+    expect(plan.requirements.every((item) => item.targetRecalls == 1), isTrue);
+    expect(plan.requirementFor(DateTime(2026, 10, 6)), isNull);
+    expect(plan.requirementFor(DateTime(2026, 10, 7)), isNotNull);
+    expect(plan.isMandatoryWeek(DateTime(2026, 10, 5)), isTrue);
+    expect(plan.isMandatoryWeek(DateTime(2026, 10, 26)), isFalse);
+    expect(plan.isMandatoryWeek(DateTime(2026, 11, 2)), isTrue);
   });
 
   test('calendar uses universal ISO week numbers across year boundaries', () {

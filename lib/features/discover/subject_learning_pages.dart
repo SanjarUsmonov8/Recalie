@@ -806,7 +806,7 @@ Future<_PlanSelection?> _showPlanPicker(BuildContext context) {
                   for (final type in RecallPlanType.values)
                     DropdownMenuItem(
                       value: type,
-                      child: Text('${type.label} plan'),
+                      child: Text(type.displayName),
                     ),
                 ],
                 onChanged: (value) {

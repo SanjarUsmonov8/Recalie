@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:recalie/data/local/local_repository.dart';
+import 'package:recalie/features/ads/recalie_native_ad.dart';
+import 'package:recalie/features/ads/rewarded_access_gate.dart';
 import 'package:recalie/features/discover/catalog_api.dart';
 import 'package:recalie/features/discover/subject_learning_pages.dart';
+import 'package:recalie/features/plans/plan_access.dart';
+import 'package:recalie/features/plans/plans_page.dart';
 
 class DiscoverSubjects extends StatefulWidget {
   const DiscoverSubjects({
@@ -34,6 +38,7 @@ class _DiscoverSubjectsState extends State<DiscoverSubjects> {
 
   @override
   Widget build(BuildContext context) {
+    final discoverLocked = !RecaliePlanScope.of(context).plan.canAccessDiscover;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -43,13 +48,6 @@ class _DiscoverSubjectsState extends State<DiscoverSubjects> {
           style: Theme.of(
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Explore server-hosted review blocks and add the ones you want to remember.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
         ),
         const SizedBox(height: 14),
         FutureBuilder<List<CatalogSubject>>(
@@ -83,21 +81,45 @@ class _DiscoverSubjectsState extends State<DiscoverSubjects> {
               itemCount: subjects.length,
               itemBuilder: (context, index) => _SubjectCard(
                 subject: subjects[index],
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => SubjectOverviewPage(
-                      subject: subjects[index],
-                      apiClient: widget.apiClient,
-                      repository: widget.repository,
-                      onViewHome: widget.onViewHome,
-                    ),
-                  ),
-                ),
+                locked: discoverLocked,
+                onTap: () => _openSubject(context, subjects[index]),
               ),
             );
           },
         ),
+        const RecalieNativeAdCard(margin: EdgeInsets.only(top: 20)),
       ],
+    );
+  }
+
+  Future<void> _openSubject(
+    BuildContext context,
+    CatalogSubject subject,
+  ) async {
+    final plan = RecaliePlanScope.of(context).plan;
+    if (!plan.canAccessDiscover) {
+      await showPlanUpgradePrompt(
+        context,
+        title: 'Discover is a Plus feature',
+        message:
+            'Upgrade to Plus to open subjects and add their learning sections to your Home page.',
+      );
+      return;
+    }
+    final granted = await RewardedAccessGate.requestAccess(
+      context,
+      contentName: '“${subject.name}”',
+    );
+    if (!granted || !context.mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SubjectOverviewPage(
+          subject: subject,
+          apiClient: widget.apiClient,
+          repository: widget.repository,
+          onViewHome: widget.onViewHome,
+        ),
+      ),
     );
   }
 }
@@ -138,9 +160,14 @@ class _CatalogError extends StatelessWidget {
 }
 
 class _SubjectCard extends StatelessWidget {
-  const _SubjectCard({required this.subject, required this.onTap});
+  const _SubjectCard({
+    required this.subject,
+    required this.locked,
+    required this.onTap,
+  });
 
   final CatalogSubject subject;
+  final bool locked;
   final VoidCallback onTap;
 
   @override
@@ -160,13 +187,26 @@ class _SubjectCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    subject.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          subject.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      if (locked) ...[
+                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.lock_rounded,
+                          color: colors.primary,
+                          size: 18,
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(

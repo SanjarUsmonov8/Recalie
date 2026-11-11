@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:recalie/data/local/local_repository.dart';
+import 'package:recalie/features/ads/recalie_native_ad.dart';
+import 'package:recalie/features/ads/rewarded_access_gate.dart';
 import 'package:recalie/features/photo_groups/memory_set_style.dart';
+import 'package:recalie/features/photo_groups/memory_set_groups.dart';
+import 'package:recalie/features/photo_groups/set_group_assignment.dart';
 import 'package:recalie/features/recall_plan/effective_recall_plan.dart';
 import 'package:recalie/features/recall_plan/recall_plan_page.dart';
 
@@ -30,38 +34,314 @@ class PictureGroupsSection extends StatelessWidget {
       builder: (context, snapshot) {
         final groups = snapshot.data ?? const <SavedPictureGroup>[];
         if (groups.isEmpty) return const SizedBox.shrink();
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 24),
-            Text(
-              'Your memory sets',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 174 / 210,
-              ),
-              itemCount: groups.length,
-              itemBuilder: (context, index) => _PictureGroupCard(
+        final ungroupedSets = groups
+            .where((group) => group.memorySetGroupId == null)
+            .toList();
+        return StreamBuilder<List<SavedRecallEvent>>(
+          stream: repository.watchAllRecallEvents(),
+          builder: (context, recallSnapshot) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              _RecallOverviewCalendar(
                 repository: repository,
-                group: groups[index],
+                groups: groups,
+                recalls: recallSnapshot.data ?? const [],
               ),
-            ),
-          ],
+              const RecalieNativeAdCard(
+                margin: EdgeInsets.symmetric(vertical: 24),
+              ),
+              MemorySetGroupsSection(repository: repository),
+              if (ungroupedSets.isNotEmpty) ...[
+                Text(
+                  'Your memory sets',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 12),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 174 / 210,
+                  ),
+                  itemCount: ungroupedSets.length,
+                  itemBuilder: (context, index) => _PictureGroupCard(
+                    repository: repository,
+                    group: ungroupedSets[index],
+                  ),
+                ),
+              ],
+              const RecalieNativeAdCard(margin: EdgeInsets.only(top: 24)),
+            ],
+          ),
         );
       },
     );
   }
+}
+
+class _RecallOverviewCalendar extends StatefulWidget {
+  const _RecallOverviewCalendar({
+    required this.repository,
+    required this.groups,
+    required this.recalls,
+  });
+
+  final LocalRepository repository;
+  final List<SavedPictureGroup> groups;
+  final List<SavedRecallEvent> recalls;
+
+  @override
+  State<_RecallOverviewCalendar> createState() =>
+      _RecallOverviewCalendarState();
+}
+
+class _RecallOverviewCalendarState extends State<_RecallOverviewCalendar> {
+  late DateTime _visibleMonth = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+  );
+  late DateTime _selectedDate = dateOnly(DateTime.now());
+
+  List<_DueMemorySet> _dueSets(DateTime date) {
+    final result = <_DueMemorySet>[];
+    for (final group in widget.groups) {
+      final plan = EffectiveRecallPlan(
+        group.planStartDate,
+        type: RecallPlanType.fromStorage(group.planType),
+      );
+      final requirement = plan.requirementFor(date);
+      if (requirement == null) continue;
+      final recalled = widget.recalls
+          .where(
+            (event) =>
+                event.pictureGroupId == group.id &&
+                requirement.contains(event.recalledAt),
+          )
+          .length;
+      result.add(
+        _DueMemorySet(
+          group: group,
+          completed: recalled >= requirement.targetRecalls,
+        ),
+      );
+    }
+    return result;
+  }
+
+  void _changeMonth(int offset) {
+    setState(() {
+      _visibleMonth = DateTime(
+        _visibleMonth.year,
+        _visibleMonth.month + offset,
+      );
+      _selectedDate = DateTime(_visibleMonth.year, _visibleMonth.month, 1);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final first = DateTime(_visibleMonth.year, _visibleMonth.month, 1);
+    final last = DateTime(_visibleMonth.year, _visibleMonth.month + 1, 0);
+    final gridStart = mondayOf(first);
+    final gridEnd = mondayOf(last).add(const Duration(days: 6));
+    final dates = List.generate(
+      gridEnd.difference(gridStart).inDays + 1,
+      (index) => gridStart.add(Duration(days: index)),
+    );
+    final selectedSets = _dueSets(_selectedDate);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  tooltip: 'Previous month',
+                  onPressed: () => _changeMonth(-1),
+                  icon: const Icon(Icons.chevron_left_rounded),
+                ),
+                Expanded(
+                  child: Text(
+                    _monthYearLabel(_visibleMonth),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: colors.primary,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Next month',
+                  onPressed: () => _changeMonth(1),
+                  icon: const Icon(Icons.chevron_right_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                for (final day in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: dates.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                childAspectRatio: 0.86,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 3,
+              ),
+              itemBuilder: (context, index) {
+                final date = dates[index];
+                final due = _dueSets(date);
+                final completed = due.where((item) => item.completed).length;
+                final allComplete = due.isNotEmpty && completed == due.length;
+                final selected = sameDate(date, _selectedDate);
+                final outsideMonth = date.month != _visibleMonth.month;
+                return Opacity(
+                  opacity: outsideMonth ? 0.42 : 1,
+                  child: InkWell(
+                    onTap: () => setState(() => _selectedDate = dateOnly(date)),
+                    customBorder: const CircleBorder(),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: due.isEmpty
+                            ? Colors.transparent
+                            : colors.primary,
+                        border: selected
+                            ? Border.all(color: colors.onSurface, width: 2)
+                            : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Opacity(
+                            opacity: allComplete ? 0.24 : 1,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '${date.day}',
+                                  style: TextStyle(
+                                    color: due.isEmpty
+                                        ? colors.onSurface
+                                        : colors.onPrimary,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                if (due.isNotEmpty)
+                                  Text(
+                                    '$completed/${due.length}',
+                                    style: TextStyle(
+                                      color: colors.onPrimary,
+                                      fontSize: 9,
+                                      height: 1,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (allComplete)
+                            Icon(
+                              Icons.check_rounded,
+                              color: colors.onPrimary,
+                              size: 31,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            if (selectedSets.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Text(
+                'Sets to recall',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              for (final due in selectedSets)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: _NumberCircle(label: '${due.group.setNumber}'),
+                  title: Text(
+                    due.group.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      decoration: due.completed
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                      decorationThickness: 2,
+                    ),
+                  ),
+                  trailing: due.completed
+                      ? Icon(Icons.check_circle_rounded, color: colors.primary)
+                      : const Icon(Icons.chevron_right_rounded),
+                  onTap: () => _openMemorySet(
+                    context,
+                    repository: widget.repository,
+                    group: due.group,
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DueMemorySet {
+  const _DueMemorySet({required this.group, required this.completed});
+
+  final SavedPictureGroup group;
+  final bool completed;
+}
+
+String _monthYearLabel(DateTime date) {
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  return '${months[date.month - 1]} ${date.year}';
 }
 
 class _PictureGroupCard extends StatelessWidget {
@@ -77,12 +357,8 @@ class _PictureGroupCard extends StatelessWidget {
       child: Card(
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) =>
-                  RecallPlanPage(repository: repository, group: group),
-            ),
-          ),
+          onTap: () =>
+              _openMemorySet(context, repository: repository, group: group),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -147,6 +423,23 @@ class _PictureGroupCard extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _openMemorySet(
+  BuildContext context, {
+  required LocalRepository repository,
+  required SavedPictureGroup group,
+}) async {
+  final granted = await RewardedAccessGate.requestAccess(
+    context,
+    contentName: '“${group.name}”',
+  );
+  if (!granted || !context.mounted) return;
+  await Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => RecallPlanPage(repository: repository, group: group),
+    ),
+  );
 }
 
 bool _hasCatalogCover(SavedPictureGroup group) {
@@ -249,6 +542,8 @@ class _AddPictureGroupSheetState extends State<_AddPictureGroupSheet> {
     DateTime.now().day,
   );
   RecallPlanType _planType = RecallPlanType.mostEffective;
+  SetGroupAssignment _groupAssignment = const SetGroupAssignment.none();
+  List<SavedMemorySetGroup> _memorySetGroups = const [];
   bool _isSaving = false;
   bool _isLoadingNumber = true;
 
@@ -256,6 +551,22 @@ class _AddPictureGroupSheetState extends State<_AddPictureGroupSheet> {
   void initState() {
     super.initState();
     _loadNextSetNumber();
+    _loadMemorySetGroups();
+  }
+
+  Future<void> _loadMemorySetGroups() async {
+    final groups = await widget.repository.getMemorySetGroups();
+    if (mounted) setState(() => _memorySetGroups = groups);
+  }
+
+  Future<void> _chooseGroupAssignment() async {
+    final assignment = await showSetGroupAssignmentDialog(
+      context: context,
+      repository: widget.repository,
+      initialValue: _groupAssignment,
+    );
+    if (assignment == null || !mounted) return;
+    setState(() => _groupAssignment = assignment);
   }
 
   Future<void> _loadNextSetNumber() async {
@@ -364,6 +675,18 @@ class _AddPictureGroupSheetState extends State<_AddPictureGroupSheet> {
         textContent: _textController.text,
         planStartDate: _startDate,
         planType: _planType.storageValue,
+        memorySetGroupId:
+            _groupAssignment.type == SetGroupAssignmentType.existing
+            ? _groupAssignment.groupId
+            : null,
+        newMemorySetGroupName:
+            _groupAssignment.type == SetGroupAssignmentType.newGroup
+            ? _groupAssignment.newGroupName
+            : null,
+        newMemorySetGroupCover:
+            _groupAssignment.type == SetGroupAssignmentType.newGroup
+            ? _groupAssignment.newGroupCover
+            : null,
       );
       if (mounted) Navigator.of(context).pop();
     } on SetNumberAlreadyUsedException {
@@ -479,6 +802,17 @@ class _AddPictureGroupSheetState extends State<_AddPictureGroupSheet> {
               Card(
                 margin: EdgeInsets.zero,
                 child: ListTile(
+                  onTap: _isSaving ? null : _chooseGroupAssignment,
+                  leading: const Icon(Icons.folder_copy_outlined),
+                  title: const Text('Set group'),
+                  subtitle: Text(_groupAssignment.label(_memorySetGroups)),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                margin: EdgeInsets.zero,
+                child: ListTile(
                   key: const Key('memorySetStartDate'),
                   onTap: _isSaving ? null : _chooseStartDate,
                   leading: const Icon(Icons.calendar_month_rounded),
@@ -518,6 +852,22 @@ class _AddPictureGroupSheetState extends State<_AddPictureGroupSheet> {
                     'More recalls in a shorter period for time-sensitive learning.',
                 onSelected: (type) => setState(() => _planType = type),
               ),
+              const SizedBox(height: 8),
+              _PlanChoiceCard(
+                type: RecallPlanType.ebbinghausSpecial,
+                selectedType: _planType,
+                description:
+                    'A focused schedule inspired by Ebbinghaus\'s forgetting-curve research.',
+                onSelected: (type) => setState(() => _planType = type),
+              ),
+              const SizedBox(height: 8),
+              _PlanChoiceCard(
+                type: RecallPlanType.sanjarUsmonovSpecial,
+                selectedType: _planType,
+                description:
+                    'A weekly-only schedule with gradually increasing gaps.',
+                onSelected: (type) => setState(() => _planType = type),
+              ),
               const SizedBox(height: 22),
               SizedBox(
                 width: double.infinity,
@@ -530,7 +880,7 @@ class _AddPictureGroupSheetState extends State<_AddPictureGroupSheet> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.add_task_rounded),
-                  label: Text('Start ${_planType.label} plan'),
+                  label: Text('Start ${_planType.displayName}'),
                 ),
               ),
             ],
@@ -564,8 +914,8 @@ class _PlanChoiceCard extends StatelessWidget {
       child: ListTile(
         onTap: () => onSelected(type),
         leading: const Icon(Icons.auto_graph_rounded),
-        title: Text('${type.label} plan'),
-        subtitle: Text(description),
+        title: Text(type.displayName),
+        subtitle: Text('$description\nDuration: ${type.durationLabel}'),
         trailing: Icon(
           selected
               ? Icons.check_circle_rounded

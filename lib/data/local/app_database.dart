@@ -24,6 +24,29 @@ CREATE TABLE IF NOT EXISTS image_notes (
   normalized_x REAL NOT NULL,
   normalized_y REAL NOT NULL,
   content TEXT NOT NULL,
+  image_bytes BLOB,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)
+''';
+
+const _createGroupAttachmentsIfMissing = '''
+CREATE TABLE IF NOT EXISTS group_attachments (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  picture_group_id INTEGER NOT NULL REFERENCES picture_groups (id),
+  type TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  data BLOB NOT NULL,
+  position INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+)
+''';
+
+const _createMemorySetGroupsIfMissing = '''
+CREATE TABLE IF NOT EXISTS memory_set_groups (
+  id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  cover_image_bytes BLOB,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 )
@@ -38,6 +61,14 @@ class AppPreferences extends Table {
   Set<Column<Object>> get primaryKey => {key};
 }
 
+class MemorySetGroups extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  BlobColumn get coverImageBytes => blob().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+}
+
 class PictureGroups extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get setNumber => integer().nullable()();
@@ -50,6 +81,8 @@ class PictureGroups extends Table {
   TextColumn get coverColorStart => text().nullable()();
   TextColumn get coverColorEnd => text().nullable()();
   TextColumn get coverImageUrl => text().nullable()();
+  IntColumn get memorySetGroupId =>
+      integer().nullable().references(MemorySetGroups, #id)();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }
@@ -87,18 +120,31 @@ class ImageNotes extends Table {
   RealColumn get normalizedX => real()();
   RealColumn get normalizedY => real()();
   TextColumn get content => text()();
+  BlobColumn get imageBytes => blob().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+}
+
+class GroupAttachments extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get pictureGroupId => integer().references(PictureGroups, #id)();
+  TextColumn get type => text()();
+  TextColumn get displayName => text()();
+  BlobColumn get data => blob()();
+  IntColumn get position => integer().withDefault(const Constant(0))();
+  DateTimeColumn get createdAt => dateTime()();
 }
 
 @DriftDatabase(
   tables: [
     AppPreferences,
+    MemorySetGroups,
     PictureGroups,
     GroupPictures,
     RecallEvents,
     ImageAnnotationStrokes,
     ImageNotes,
+    GroupAttachments,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -115,12 +161,41 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
 
-  Future<void> ensureImageNoteStorage() {
-    return customStatement(_createImageNotesIfMissing);
+  Future<void> ensureImageNoteStorage() async {
+    await customStatement(_createImageNotesIfMissing);
+    await _ensureImageNotePhotoColumn();
+  }
+
+  Future<void> _ensureImageNotePhotoColumn() async {
+    final columns = await customSelect('PRAGMA table_info(image_notes)').get();
+    final hasColumn = columns.any(
+      (row) => row.read<String>('name') == 'image_bytes',
+    );
+    if (!hasColumn) {
+      await customStatement(
+        'ALTER TABLE image_notes ADD COLUMN image_bytes BLOB',
+      );
+    }
+  }
+
+  Future<void> _ensureMemorySetGroupStorage() async {
+    await customStatement(_createMemorySetGroupsIfMissing);
+    final columns = await customSelect(
+      'PRAGMA table_info(picture_groups)',
+    ).get();
+    final hasColumn = columns.any(
+      (row) => row.read<String>('name') == 'memory_set_group_id',
+    );
+    if (!hasColumn) {
+      await customStatement(
+        'ALTER TABLE picture_groups ADD COLUMN memory_set_group_id '
+        'INTEGER NULL REFERENCES memory_set_groups (id)',
+      );
+    }
   }
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -178,12 +253,24 @@ class AppDatabase extends _$AppDatabase {
       if (from < 9) {
         await customStatement(_createImageNotesIfMissing);
       }
+      if (from < 10) {
+        await customStatement(_createGroupAttachmentsIfMissing);
+      }
+      if (from < 11) {
+        await _ensureImageNotePhotoColumn();
+      }
+      if (from < 12) {
+        await _ensureMemorySetGroupStorage();
+      }
     },
     beforeOpen: (_) async {
       // Repairs installations that were hot-restarted while the v7 migration
       // was introduced and therefore recorded the version without the table.
       await customStatement(_createImageAnnotationStrokesIfMissing);
       await customStatement(_createImageNotesIfMissing);
+      await _ensureImageNotePhotoColumn();
+      await customStatement(_createGroupAttachmentsIfMissing);
+      await _ensureMemorySetGroupStorage();
     },
   );
 }

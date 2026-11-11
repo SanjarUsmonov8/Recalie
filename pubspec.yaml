@@ -33,7 +33,12 @@ dependencies:
   drift: ^2.34.2
   drift_flutter: ^0.3.1
   image_picker: ^1.2.3
+  file_picker: ^10.3.10
+  google_mobile_ads: ^9.1.0
   http: ^1.5.0
+  open_filex: ^4.7.0
+  path_provider: ^2.1.5
+  flutter_secure_storage: ^10.0.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -42,6 +47,7 @@ dependencies:
 dev_dependencies:
   build_runner: 2.15.1
   drift_dev: ^2.34.2
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
 
@@ -62,6 +68,15 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/images/recalie_logo_1024.png
+    - assets/images/herecalling diagram.png
+    - assets/images/walnut1.png
+    - assets/images/walnut1.5.png
+    - assets/images/walnut2.png
+    - assets/images/walnut2.5.png
+    - assets/images/walnut3.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -93,3 +108,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/recalie_logo_1024.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true

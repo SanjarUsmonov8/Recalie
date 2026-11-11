@@ -1,11 +1,63 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:recalie/data/local/local_repository.dart';
 import 'package:recalie/features/photo_groups/memory_set_style.dart';
+import 'package:recalie/features/recall_plan/movable_note_popup.dart';
 import 'package:recalie/features/recall_plan/recall_review_completion.dart';
 
 const _pageSeparator = '\f';
+
+Future<void> moveSubjectTextPage({
+  required LocalRepository repository,
+  required SavedPictureGroup subject,
+  required int oldIndex,
+  required int newPosition,
+}) async {
+  final text = subject.textContent;
+  if (text == null || text.trim().isEmpty) return;
+  final pages = text.split(_pageSeparator);
+  if (oldIndex < 0 || oldIndex >= pages.length) return;
+  final newIndex = (newPosition - 1).clamp(0, pages.length - 1);
+  if (oldIndex == newIndex) return;
+
+  final oldOrder = List<int>.generate(pages.length, (index) => index);
+  final movedPage = pages.removeAt(oldIndex);
+  pages.insert(newIndex, movedPage);
+  final movedOldIndex = oldOrder.removeAt(oldIndex);
+  oldOrder.insert(newIndex, movedOldIndex);
+
+  final markupKey = 'subject_text_markup_${subject.id}';
+  final storedMarkup = await repository.readPreference(markupKey);
+  if (storedMarkup != null && storedMarkup.isNotEmpty) {
+    try {
+      final markup = Map<String, dynamic>.from(jsonDecode(storedMarkup) as Map);
+      for (final field in const ['strokes', 'lines', 'notes', 'pageImages']) {
+        final value = markup[field];
+        if (value is! Map) continue;
+        final oldMap = Map<String, dynamic>.from(value);
+        markup[field] = <String, dynamic>{
+          for (var index = 0; index < oldOrder.length; index++)
+            if (oldMap.containsKey('${oldOrder[index]}'))
+              '$index': oldMap['${oldOrder[index]}'],
+        };
+      }
+      await repository.savePreference(markupKey, jsonEncode(markup));
+    } on Object {
+      // Damaged legacy markup should not prevent the text itself from moving.
+    }
+  }
+
+  await reorderTextItemProgress(
+    repository: repository,
+    subject: subject,
+    oldIndex: oldIndex,
+    newIndex: newIndex,
+  );
+  await repository.updateSubjectText(subject.id, pages.join(_pageSeparator));
+}
 
 class SubjectTextPage extends StatefulWidget {
   const SubjectTextPage({
@@ -41,7 +93,8 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
   Offset _notePosition = const Offset(.5, .5);
   final Map<int, List<_TextStroke>> _strokes = {};
   final Map<int, List<_PageNote>> _pageNotes = {};
-  Set<int> _reviewedPages = {};
+  final Map<int, List<Uint8List>> _pageImages = {};
+  RecallItemProgress? _reviewProgress;
   _TextAnnotationTool _drawingTool = _TextAnnotationTool.pen;
   _TextEraserMode _eraserMode = _TextEraserMode.line;
   bool _straightLine = false;
@@ -53,50 +106,32 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
   final List<List<_TextStroke>> _redoHistory = [];
 
   String get _markupPreferenceKey => 'subject_text_markup_${widget.subject.id}';
-  String get _reviewPreferenceKey =>
-      'subject_text_reviewed_${widget.subject.id}';
-
   @override
   void initState() {
     super.initState();
     _loadMarkup();
-    _loadReviewedPages();
+    _loadReviewProgress();
   }
 
-  Future<void> _loadReviewedPages() async {
-    final value = await widget.repository.readPreference(_reviewPreferenceKey);
-    final reviewed = <int>{};
-    if (value != null && value.isNotEmpty) {
-      for (final part in value.split(',')) {
-        final page = int.tryParse(part);
-        if (page != null && page >= 0 && page < _pages.length) {
-          reviewed.add(page);
-        }
-      }
-    }
-    if (mounted) setState(() => _reviewedPages = reviewed);
+  Future<void> _loadReviewProgress() async {
+    final subject = await widget.repository.getPictureGroup(widget.subject.id);
+    if (subject == null) return;
+    final progress = await loadCurrentItemProgress(
+      repository: widget.repository,
+      subject: subject,
+    );
+    if (mounted) setState(() => _reviewProgress = progress);
   }
 
   Future<void> _togglePageReviewed() async {
-    final wasReviewed = _reviewedPages.contains(_page);
-    setState(() {
-      if (!_reviewedPages.add(_page)) _reviewedPages.remove(_page);
-    });
-    await widget.repository.savePreference(
-      _reviewPreferenceKey,
-      (_reviewedPages.toList()..sort()).join(','),
+    final subject = await widget.repository.getPictureGroup(widget.subject.id);
+    if (subject == null) return;
+    final progress = await advanceItemReview(
+      repository: widget.repository,
+      subject: subject,
+      itemKey: textReviewItemKey(_page),
     );
-    if (!wasReviewed) {
-      final completed = await completeTodayIfEveryItemIsReviewed(
-        repository: widget.repository,
-        subjectId: widget.subject.id,
-      );
-      if (completed && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Today\'s recall is complete.')),
-        );
-      }
-    }
+    if (mounted) setState(() => _reviewProgress = progress);
   }
 
   Future<void> _loadMarkup() async {
@@ -107,8 +142,11 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
       final storedStrokes = data['strokes'] as Map<String, dynamic>?;
       final storedLines = data['lines'] as Map<String, dynamic>? ?? const {};
       final storedNotes = data['notes'] as Map<String, dynamic>? ?? const {};
+      final storedPageImages =
+          data['pageImages'] as Map<String, dynamic>? ?? const {};
       final strokes = <int, List<_TextStroke>>{};
       final notes = <int, List<_PageNote>>{};
+      final pageImages = <int, List<Uint8List>>{};
       if (storedStrokes != null) {
         for (final entry in storedStrokes.entries) {
           strokes[int.parse(entry.key)] = (entry.value as List<dynamic>)
@@ -150,6 +188,12 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
             )
             .toList();
       }
+      for (final entry in storedPageImages.entries) {
+        pageImages[int.parse(entry.key)] = (entry.value as List<dynamic>)
+            .whereType<String>()
+            .map(base64Decode)
+            .toList();
+      }
       if (!mounted) return;
       setState(() {
         _strokes
@@ -158,6 +202,9 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
         _pageNotes
           ..clear()
           ..addAll(notes);
+        _pageImages
+          ..clear()
+          ..addAll(pageImages);
       });
     } on Object {
       // Ignore damaged legacy markup; the written text remains available.
@@ -175,6 +222,10 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
       'notes': _pageNotes.map(
         (page, notes) =>
             MapEntry('$page', notes.map((note) => note.toJson()).toList()),
+      ),
+      'pageImages': _pageImages.map(
+        (page, images) =>
+            MapEntry('$page', images.map(base64Encode).toList(growable: false)),
       ),
     };
     return widget.repository.savePreference(
@@ -235,9 +286,38 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
     );
   }
 
-  Future<String?> _noteEditor([String initial = '']) {
-    var value = initial;
-    return showModalBottomSheet<String>(
+  void _insertPageImage(int page, KeyboardInsertedContent content) {
+    final bytes = content.data;
+    if (bytes == null || bytes.isEmpty) return;
+    setState(() => (_pageImages[page] ??= []).add(bytes));
+    _saveMarkup();
+  }
+
+  Future<void> _pickPageImages(int page) async {
+    final photos = await ImagePicker().pickMultiImage(
+      imageQuality: 85,
+      maxWidth: 2048,
+    );
+    if (photos.isEmpty) return;
+    final images = await Future.wait(
+      photos.map((photo) => photo.readAsBytes()),
+    );
+    if (!mounted) return;
+    setState(() => (_pageImages[page] ??= []).addAll(images));
+    await _saveMarkup();
+  }
+
+  Future<void> _removePageImage(int page, int imageIndex) async {
+    final images = _pageImages[page];
+    if (images == null || imageIndex < 0 || imageIndex >= images.length) return;
+    setState(() => images.removeAt(imageIndex));
+    await _saveMarkup();
+  }
+
+  Future<_PageNoteDraft?> _noteEditor([_PageNote? initial]) {
+    var value = initial?.text ?? '';
+    final images = <Uint8List>[...?initial?.images];
+    return showModalBottomSheet<_PageNoteDraft>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -253,7 +333,7 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                initialValue: initial,
+                initialValue: value,
                 autofocus: true,
                 minLines: 5,
                 maxLines: 10,
@@ -262,14 +342,56 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (text) => update(() => value = text),
+                contentInsertionConfiguration: ContentInsertionConfiguration(
+                  allowedMimeTypes: const [
+                    'image/png',
+                    'image/jpeg',
+                    'image/gif',
+                    'image/webp',
+                  ],
+                  onContentInserted: (content) {
+                    final bytes = content.data;
+                    if (bytes != null && bytes.isNotEmpty) {
+                      update(() => images.add(bytes));
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (images.isNotEmpty) ...[
+                _EditableNoteImages(
+                  images: images,
+                  onRemove: (index) => update(() => images.removeAt(index)),
+                ),
+                const SizedBox(height: 10),
+              ],
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final photos = await ImagePicker().pickMultiImage(
+                      imageQuality: 85,
+                      maxWidth: 2048,
+                    );
+                    if (photos.isEmpty) return;
+                    final selected = await Future.wait(
+                      photos.map((photo) => photo.readAsBytes()),
+                    );
+                    update(() => images.addAll(selected));
+                  },
+                  icon: const Icon(Icons.add_photo_alternate_rounded),
+                  label: const Text('Add photos'),
+                ),
               ),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton(
-                  onPressed: value.trim().isEmpty
+                  onPressed: value.trim().isEmpty && images.isEmpty
                       ? null
-                      : () => Navigator.of(sheetContext).pop(value.trim()),
+                      : () => Navigator.of(
+                          sheetContext,
+                        ).pop(_PageNoteDraft(value.trim(), List.of(images))),
                   child: const Text('Save note'),
                 ),
               ),
@@ -281,13 +403,24 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
   }
 
   Future<void> _createNote() async {
-    final text = await _noteEditor();
-    if (text == null) return;
+    final draft = await _noteEditor();
+    if (draft == null) return;
     setState(() {
-      (_pageNotes[_page] ??= []).add(_PageNote(_notePosition, text));
+      (_pageNotes[_page] ??= []).add(
+        _PageNote(_notePosition, draft.text, draft.images),
+      );
       _notePosition = const Offset(.5, .5);
     });
     await _saveMarkup();
+  }
+
+  Future<void> _showPageNote(_PageNote note, Offset anchor) {
+    return showMovableNotePopup(
+      context: context,
+      anchor: anchor,
+      content: note.text,
+      images: note.images,
+    );
   }
 
   Future<void> _leave() async {
@@ -489,7 +622,17 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
                       const SizedBox(width: 5),
                       _PageControlsCapsule(
                         page: _page + 1,
-                        reviewed: _reviewedPages.contains(_page),
+                        reviewed:
+                            _reviewProgress?.isComplete(
+                              textReviewItemKey(_page),
+                            ) ??
+                            false,
+                        reviewCount:
+                            _reviewProgress?.countFor(
+                              textReviewItemKey(_page),
+                            ) ??
+                            0,
+                        reviewTarget: _reviewProgress?.target ?? 1,
                         editing: _editing,
                         saving: _saving,
                         onAdd: _addPage,
@@ -549,29 +692,100 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
                                   Padding(
                                     padding: const EdgeInsets.all(24),
                                     child: _editing && index == _page
-                                        ? TextField(
-                                            key: const Key('subjectTextEditor'),
-                                            controller: _pages[index],
-                                            expands: true,
-                                            minLines: null,
-                                            maxLines: null,
-                                            textAlignVertical:
-                                                TextAlignVertical.top,
-                                            decoration:
-                                                const InputDecoration.collapsed(
-                                                  hintText:
-                                                      'Write what you want to recall…',
+                                        ? Column(
+                                            children: [
+                                              Expanded(
+                                                child: TextField(
+                                                  key: const Key(
+                                                    'subjectTextEditor',
+                                                  ),
+                                                  controller: _pages[index],
+                                                  expands: true,
+                                                  minLines: null,
+                                                  maxLines: null,
+                                                  textAlignVertical:
+                                                      TextAlignVertical.top,
+                                                  decoration:
+                                                      const InputDecoration.collapsed(
+                                                        hintText:
+                                                            'Write what you want to recall…',
+                                                      ),
+                                                  contentInsertionConfiguration:
+                                                      ContentInsertionConfiguration(
+                                                        allowedMimeTypes:
+                                                            const [
+                                                              'image/png',
+                                                              'image/jpeg',
+                                                              'image/gif',
+                                                              'image/webp',
+                                                            ],
+                                                        onContentInserted:
+                                                            (content) =>
+                                                                _insertPageImage(
+                                                                  index,
+                                                                  content,
+                                                                ),
+                                                      ),
                                                 ),
+                                              ),
+                                              if ((_pageImages[index] ??
+                                                      const [])
+                                                  .isNotEmpty) ...[
+                                                const SizedBox(height: 10),
+                                                _EditableNoteImages(
+                                                  images:
+                                                      _pageImages[index] ??
+                                                      const [],
+                                                  height: 92,
+                                                  onRemove: (imageIndex) =>
+                                                      _removePageImage(
+                                                        index,
+                                                        imageIndex,
+                                                      ),
+                                                ),
+                                              ],
+                                              const SizedBox(height: 6),
+                                              Align(
+                                                alignment: Alignment.centerLeft,
+                                                child: TextButton.icon(
+                                                  onPressed: () =>
+                                                      _pickPageImages(index),
+                                                  icon: const Icon(
+                                                    Icons
+                                                        .add_photo_alternate_rounded,
+                                                  ),
+                                                  label: const Text(
+                                                    'Add images',
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           )
                                         : SingleChildScrollView(
-                                            child: SelectableText(
-                                              _pages[index].text.isEmpty
-                                                  ? 'This page is empty.'
-                                                  : _pages[index].text,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyLarge
-                                                  ?.copyWith(height: 1.65),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                SelectableText(
+                                                  _pages[index].text.isEmpty
+                                                      ? 'This page is empty.'
+                                                      : _pages[index].text,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyLarge
+                                                      ?.copyWith(height: 1.65),
+                                                ),
+                                                if ((_pageImages[index] ??
+                                                        const [])
+                                                    .isNotEmpty) ...[
+                                                  const SizedBox(height: 18),
+                                                  _ReadOnlyNoteImages(
+                                                    images:
+                                                        _pageImages[index] ??
+                                                        const [],
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                           ),
                                   ),
@@ -610,19 +824,29 @@ class _SubjectTextPageState extends State<SubjectTextPage> {
                                     _NotesLayer(
                                       notes: _pageNotes[index] ?? const [],
                                       adding: _notes && index == _page,
+                                      editing: _notes && index == _page,
                                       draft: _notePosition,
-                                      onMove: (value) =>
+                                      onDraftMove: (value) =>
                                           setState(() => _notePosition = value),
                                       onCreate: _createNote,
-                                      onOpen: (note) async {
-                                        final text = await _noteEditor(
-                                          note.text,
-                                        );
-                                        if (text != null && mounted) {
-                                          setState(() => note.text = text);
-                                          await _saveMarkup();
+                                      onOpen: (note, anchor) async {
+                                        if (!_notes) {
+                                          await _showPageNote(note, anchor);
+                                        } else {
+                                          final draft = await _noteEditor(note);
+                                          if (draft != null && mounted) {
+                                            setState(() {
+                                              note.text = draft.text;
+                                              note.images = draft.images;
+                                            });
+                                            await _saveMarkup();
+                                          }
                                         }
                                       },
+                                      onNoteMove: (note, position) => setState(
+                                        () => note.position = position,
+                                      ),
+                                      onNoteMoveEnd: (_) => _saveMarkup(),
                                     ),
                                 ],
                               ),
@@ -745,7 +969,10 @@ class _ToolCapsule extends StatelessWidget {
           tooltip: 'Page notes',
           selected: notes,
           onTap: onNotes,
-          child: const Icon(Icons.note_add_rounded, size: 23),
+          child: Icon(
+            notes ? Icons.check_rounded : Icons.note_add_rounded,
+            size: notes ? 27 : 23,
+          ),
         ),
         Container(width: 1, height: 24, color: Colors.white30),
         _Tool(
@@ -809,6 +1036,8 @@ class _PageControlsCapsule extends StatelessWidget {
   const _PageControlsCapsule({
     required this.page,
     required this.reviewed,
+    required this.reviewCount,
+    required this.reviewTarget,
     required this.editing,
     required this.saving,
     required this.onAdd,
@@ -818,6 +1047,8 @@ class _PageControlsCapsule extends StatelessWidget {
 
   final int page;
   final bool reviewed;
+  final int reviewCount;
+  final int reviewTarget;
   final bool editing;
   final bool saving;
   final VoidCallback onAdd;
@@ -849,7 +1080,13 @@ class _PageControlsCapsule extends StatelessWidget {
           loading: saving,
         ),
         Container(width: 1, height: 24, color: Colors.white30),
-        _CapsuleReviewAction(page: page, reviewed: reviewed, onTap: onReview),
+        _CapsuleReviewAction(
+          page: page,
+          reviewed: reviewed,
+          reviewCount: reviewCount,
+          reviewTarget: reviewTarget,
+          onTap: onReview,
+        ),
       ],
     ),
   );
@@ -859,11 +1096,15 @@ class _CapsuleReviewAction extends StatelessWidget {
   const _CapsuleReviewAction({
     required this.page,
     required this.reviewed,
+    required this.reviewCount,
+    required this.reviewTarget,
     required this.onTap,
   });
 
   final int page;
   final bool reviewed;
+  final int reviewCount;
+  final int reviewTarget;
   final VoidCallback onTap;
 
   @override
@@ -878,9 +1119,10 @@ class _CapsuleReviewAction extends StatelessWidget {
           child: reviewed
               ? const Icon(Icons.check_rounded, color: Colors.white, size: 27)
               : Text(
-                  '$page',
+                  reviewCount > 0 ? '$reviewCount/$reviewTarget' : '$page',
                   style: const TextStyle(
                     color: Colors.white,
+                    fontSize: 13,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -1743,14 +1985,18 @@ class _TextPageCoverPainter extends CustomPainter {
       );
       handleCenter = Offset(size.width / 2, boundary);
     }
-    canvas.drawCircle(
-      handleCenter,
-      13,
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: handleCenter, width: 16, height: 32),
+        const Radius.circular(8),
+      ),
       Paint()..color = const Color(0xFF102F70),
     );
-    canvas.drawCircle(
-      handleCenter,
-      6,
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: handleCenter, width: 7, height: 21),
+        const Radius.circular(4),
+      ),
       Paint()..color = const Color(0xFF93C5FD),
     );
   }
@@ -1764,38 +2010,139 @@ class _TextPageCoverPainter extends CustomPainter {
 }
 
 class _PageNote {
-  _PageNote(this.position, this.text);
+  _PageNote(this.position, this.text, [List<Uint8List>? images])
+    : images = images ?? [];
 
-  factory _PageNote.fromJson(Map<String, dynamic> json) => _PageNote(
-    Offset((json['x'] as num).toDouble(), (json['y'] as num).toDouble()),
-    json['text'] as String,
-  );
+  factory _PageNote.fromJson(Map<String, dynamic> json) {
+    final storedImages = json['images'];
+    final images = storedImages is List
+        ? storedImages.whereType<String>().map(base64Decode).toList()
+        : json['image'] is String
+        ? [base64Decode(json['image'] as String)]
+        : <Uint8List>[];
+    return _PageNote(
+      Offset((json['x'] as num).toDouble(), (json['y'] as num).toDouble()),
+      json['text'] as String,
+      images,
+    );
+  }
 
-  final Offset position;
+  Offset position;
   String text;
+  List<Uint8List> images;
 
   Map<String, dynamic> toJson() => {
     'x': position.dx,
     'y': position.dy,
     'text': text,
+    if (images.isNotEmpty)
+      'images': images.map(base64Encode).toList(growable: false),
   };
+}
+
+class _PageNoteDraft {
+  const _PageNoteDraft(this.text, this.images);
+
+  final String text;
+  final List<Uint8List> images;
+}
+
+class _EditableNoteImages extends StatelessWidget {
+  const _EditableNoteImages({
+    required this.images,
+    required this.onRemove,
+    this.height = 150,
+  });
+
+  final List<Uint8List> images;
+  final ValueChanged<int> onRemove;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: height,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: images.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, index) => Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.memory(
+              images[index],
+              width: height * 1.15,
+              height: height,
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned(
+            right: 4,
+            top: 4,
+            child: IconButton.filled(
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Remove image',
+              onPressed: () => onRemove(index),
+              icon: const Icon(Icons.close_rounded, size: 18),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _ReadOnlyNoteImages extends StatelessWidget {
+  const _ReadOnlyNoteImages({required this.images});
+
+  final List<Uint8List> images;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (var index = 0; index < images.length; index++) ...[
+        GestureDetector(
+          onTap: () => showNoteImageViewer(
+            context: context,
+            images: images,
+            initialIndex: index,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.memory(
+              images[index],
+              width: double.infinity,
+              fit: BoxFit.fitWidth,
+            ),
+          ),
+        ),
+        if (index != images.length - 1) const SizedBox(height: 10),
+      ],
+    ],
+  );
 }
 
 class _NotesLayer extends StatelessWidget {
   const _NotesLayer({
     required this.notes,
     required this.adding,
+    required this.editing,
     required this.draft,
-    required this.onMove,
+    required this.onDraftMove,
     required this.onCreate,
     required this.onOpen,
+    required this.onNoteMove,
+    required this.onNoteMoveEnd,
   });
   final List<_PageNote> notes;
   final bool adding;
+  final bool editing;
   final Offset draft;
-  final ValueChanged<Offset> onMove;
+  final ValueChanged<Offset> onDraftMove;
   final VoidCallback onCreate;
-  final ValueChanged<_PageNote> onOpen;
+  final void Function(_PageNote note, Offset anchor) onOpen;
+  final void Function(_PageNote note, Offset position) onNoteMove;
+  final ValueChanged<_PageNote> onNoteMoveEnd;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) => Stack(
@@ -1805,7 +2152,7 @@ class _NotesLayer extends StatelessWidget {
             left: draft.dx * box.maxWidth - 18,
             top: draft.dy * box.maxHeight - 18,
             child: GestureDetector(
-              onPanUpdate: (details) => onMove(
+              onPanUpdate: (details) => onDraftMove(
                 Offset(
                   (draft.dx + details.delta.dx / box.maxWidth).clamp(0.0, 1.0),
                   (draft.dy + details.delta.dy / box.maxHeight).clamp(0.0, 1.0),
@@ -1820,7 +2167,19 @@ class _NotesLayer extends StatelessWidget {
             left: note.position.dx * box.maxWidth - 18,
             top: note.position.dy * box.maxHeight - 18,
             child: GestureDetector(
-              onTap: () => onOpen(note),
+              onPanUpdate: !editing
+                  ? null
+                  : (details) => onNoteMove(
+                      note,
+                      Offset(
+                        (note.position.dx + details.delta.dx / box.maxWidth)
+                            .clamp(0.0, 1.0),
+                        (note.position.dy + details.delta.dy / box.maxHeight)
+                            .clamp(0.0, 1.0),
+                      ),
+                    ),
+              onPanEnd: !editing ? null : (_) => onNoteMoveEnd(note),
+              onTapUp: (details) => onOpen(note, details.globalPosition),
               child: const _NoteIcon(Icons.sticky_note_2_rounded),
             ),
           ),

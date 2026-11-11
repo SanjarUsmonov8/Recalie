@@ -1,15 +1,27 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:recalie/data/local/app_database.dart';
 import 'package:recalie/data/local/local_repository.dart';
+import 'package:recalie/features/ads/recalie_native_ad.dart';
+import 'package:recalie/features/ai/ai_coach_panel.dart';
 import 'package:recalie/features/discover/catalog_api.dart';
 import 'package:recalie/features/discover/discover_subjects.dart';
 import 'package:recalie/features/photo_groups/photo_groups.dart';
+import 'package:recalie/features/plans/plan_access.dart';
+import 'package:recalie/features/plans/plans_page.dart';
+import 'package:recalie/features/profile/profile_controller.dart';
+import 'package:recalie/features/profile/profile_page.dart';
 import 'package:recalie/features/settings/settings_page.dart';
+import 'package:recalie/features/walnuts/walnut_controller.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    MobileAds.instance.initialize();
+  }
   runApp(RecalieApp(database: AppDatabase.defaults()));
 }
 
@@ -18,11 +30,13 @@ class RecalieApp extends StatefulWidget {
     super.key,
     required this.database,
     this.showPictureGroups = true,
+    this.enableAds = true,
     this.catalogApiClient = const CatalogApiClient(),
   });
 
   final AppDatabase database;
   final bool showPictureGroups;
+  final bool enableAds;
   final CatalogApiClient catalogApiClient;
 
   @override
@@ -31,13 +45,29 @@ class RecalieApp extends StatefulWidget {
 
 class _RecalieAppState extends State<RecalieApp> {
   ThemeMode _themeMode = ThemeMode.light;
+  RecalieMembershipPlan _membershipPlan = RecalieMembershipPlan.free;
+  DateTime? _membershipPlanExpiresAt;
   late final LocalRepository _localRepository;
+  late final RecalieProfileController _profileController;
+  late final WalnutController _walnutController;
 
   @override
   void initState() {
     super.initState();
     _localRepository = LocalRepository(widget.database);
+    _profileController = RecalieProfileController(_localRepository);
+    _walnutController = WalnutController(_localRepository);
     _restoreTheme();
+    _restoreMembershipPlan();
+    _profileController.load();
+    _walnutController.load();
+  }
+
+  @override
+  void dispose() {
+    _walnutController.dispose();
+    _profileController.dispose();
+    super.dispose();
   }
 
   Future<void> _restoreTheme() async {
@@ -61,23 +91,99 @@ class _RecalieAppState extends State<RecalieApp> {
     });
   }
 
+  Future<void> _restoreMembershipPlan() async {
+    final savedPlan = await _localRepository.readPreference('membership_plan');
+    final savedExpiry = await _localRepository.readPreference(
+      'membership_plan_expires_at',
+    );
+    if (!mounted) return;
+    var plan = RecalieMembershipPlanRules.fromStorage(savedPlan);
+    var expiresAt = DateTime.tryParse(savedExpiry ?? '');
+    final now = DateTime.now();
+    if (plan != RecalieMembershipPlan.free && expiresAt == null) {
+      expiresAt = _sameDayNextMonth(now);
+      await _localRepository.savePreference(
+        'membership_plan_expires_at',
+        expiresAt.toIso8601String(),
+      );
+    } else if (plan != RecalieMembershipPlan.free && expiresAt!.isBefore(now)) {
+      plan = RecalieMembershipPlan.free;
+      expiresAt = null;
+      await _localRepository.savePreference(
+        'membership_plan',
+        RecalieMembershipPlan.free.storageValue,
+      );
+      await _localRepository.savePreference('membership_plan_expires_at', '');
+    }
+    if (!mounted) return;
+    setState(() {
+      _membershipPlan = plan;
+      _membershipPlanExpiresAt = expiresAt;
+    });
+  }
+
+  Future<void> _setMembershipPlan(RecalieMembershipPlan plan) async {
+    final expiresAt = plan == RecalieMembershipPlan.free
+        ? null
+        : _sameDayNextMonth(DateTime.now());
+    setState(() {
+      _membershipPlan = plan;
+      _membershipPlanExpiresAt = expiresAt;
+    });
+    await _localRepository.savePreference('membership_plan', plan.storageValue);
+    await _localRepository.savePreference(
+      'membership_plan_expires_at',
+      expiresAt?.toIso8601String() ?? '',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Recalie',
-      debugShowCheckedModeBanner: false,
-      themeMode: _themeMode,
-      theme: _recalieTheme(Brightness.light),
-      darkTheme: _recalieTheme(Brightness.dark),
-      home: RecalieShell(
-        localRepository: _localRepository,
-        themeMode: _themeMode,
-        onThemeChanged: _setTheme,
-        showPictureGroups: widget.showPictureGroups,
-        catalogApiClient: widget.catalogApiClient,
+    return WalnutScope(
+      controller: _walnutController,
+      child: RecalieProfileScope(
+        controller: _profileController,
+        child: RecaliePlanScope(
+          plan: _membershipPlan,
+          expiresAt: _membershipPlanExpiresAt,
+          onPlanChanged: _setMembershipPlan,
+          child: MaterialApp(
+            title: 'Recalie',
+            debugShowCheckedModeBanner: false,
+            themeMode: _themeMode,
+            theme: _recalieTheme(Brightness.light),
+            darkTheme: _recalieTheme(Brightness.dark),
+            home: RecalieShell(
+              localRepository: _localRepository,
+              themeMode: _themeMode,
+              onThemeChanged: _setTheme,
+              showPictureGroups: widget.showPictureGroups,
+              enableAds: widget.enableAds,
+              catalogApiClient: widget.catalogApiClient,
+            ),
+          ),
+        ),
       ),
     );
   }
+}
+
+DateTime _sameDayNextMonth(DateTime date) {
+  final firstOfFollowingMonth = DateTime(date.year, date.month + 2);
+  final lastDayOfNextMonth = firstOfFollowingMonth.subtract(
+    const Duration(days: 1),
+  );
+  final day = date.day < lastDayOfNextMonth.day
+      ? date.day
+      : lastDayOfNextMonth.day;
+  return DateTime(
+    lastDayOfNextMonth.year,
+    lastDayOfNextMonth.month,
+    day,
+    date.hour,
+    date.minute,
+    date.second,
+  );
 }
 
 ThemeData _recalieTheme(Brightness brightness) {
@@ -107,6 +213,7 @@ class RecalieShell extends StatefulWidget {
     required this.themeMode,
     required this.onThemeChanged,
     required this.showPictureGroups,
+    required this.enableAds,
     required this.catalogApiClient,
   });
 
@@ -114,6 +221,7 @@ class RecalieShell extends StatefulWidget {
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final bool showPictureGroups;
+  final bool enableAds;
   final CatalogApiClient catalogApiClient;
 
   @override
@@ -144,13 +252,40 @@ class _RecalieShellState extends State<RecalieShell> {
     await widget.localRepository.savePreference('selected_tab', '$index');
   }
 
+  Future<void> _addMemorySet() async {
+    final plan = RecaliePlanScope.of(context).plan;
+    final limit = plan.memorySetLimit;
+    if (limit != null) {
+      final count = await widget.localRepository.pictureGroupCount();
+      if (!mounted) return;
+      if (count >= limit) {
+        await showPlanUpgradePrompt(
+          context,
+          title: 'Free plan limit reached',
+          message:
+              'Free includes up to $limit memory sets. Upgrade to Plus for unlimited sets.',
+        );
+        return;
+      }
+    }
+    if (!mounted) return;
+    await showAddPictureGroupSheet(context, widget.localRepository);
+  }
+
+  Future<void> _openProfile() {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ProfilePage(repository: widget.localRepository),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
       RecaliePage(
         title: 'Recalie',
-        description:
-            'Save images or text and recall them through increasing review gaps.',
+        onProfilePressed: _openProfile,
         themeMode: widget.themeMode,
         onThemeChanged: widget.onThemeChanged,
         lowerContent: widget.showPictureGroups
@@ -159,23 +294,32 @@ class _RecalieShellState extends State<RecalieShell> {
       ),
       RecaliePage(
         title: 'Discover',
-        description: 'Find subjects and build memory sets around them.',
+        onProfilePressed: _openProfile,
         themeMode: widget.themeMode,
         onThemeChanged: widget.onThemeChanged,
-        lowerContent: DiscoverSubjects(
-          repository: widget.localRepository,
-          apiClient: widget.catalogApiClient,
-          onViewHome: () {
-            Navigator.of(context).popUntil((route) => route.isFirst);
-            _selectTab(0);
-          },
+        lowerContent: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _ForgettingCurveIntroduction(),
+            if (widget.enableAds)
+              const RecalieNativeAdCard(margin: EdgeInsets.only(top: 18)),
+            DiscoverSubjects(
+              repository: widget.localRepository,
+              apiClient: widget.catalogApiClient,
+              onViewHome: () {
+                Navigator.of(context).popUntil((route) => route.isFirst);
+                _selectTab(0);
+              },
+            ),
+          ],
         ),
       ),
       RecaliePage(
         title: 'AI Coach',
-        description: 'Get thoughtful help whenever you need it.',
+        onProfilePressed: _openProfile,
         themeMode: widget.themeMode,
         onThemeChanged: widget.onThemeChanged,
+        lowerContent: const AiCoachPanel(),
       ),
     ];
 
@@ -193,8 +337,7 @@ class _RecalieShellState extends State<RecalieShell> {
             child: RecalieNavigationBar(
               currentIndex: _selectedIndex,
               onChanged: _selectTab,
-              onAddPressed: () =>
-                  showAddPictureGroupSheet(context, widget.localRepository),
+              onAddPressed: _addMemorySet,
             ),
           ),
         ],
@@ -207,14 +350,14 @@ class RecaliePage extends StatelessWidget {
   const RecaliePage({
     super.key,
     required this.title,
-    required this.description,
+    required this.onProfilePressed,
     required this.themeMode,
     required this.onThemeChanged,
     this.lowerContent,
   });
 
   final String title;
-  final String description;
+  final VoidCallback onProfilePressed;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeChanged;
   final Widget? lowerContent;
@@ -232,10 +375,11 @@ class RecaliePage extends StatelessWidget {
           children: [
             Row(
               children: [
-                const _ProfilePictureButton(),
+                _ProfilePictureButton(onPressed: onProfilePressed),
                 const Spacer(),
                 _TopActionCapsule(
                   isDark: isDark,
+                  onPremiumPressed: () => openPlansPage(context),
                   onSettingsPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => SettingsPage(
@@ -254,13 +398,6 @@ class RecaliePage extends StatelessWidget {
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
-            const SizedBox(height: 4),
-            Text(
-              description,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
             const SizedBox(height: 8),
             content,
           ],
@@ -270,27 +407,80 @@ class RecaliePage extends StatelessWidget {
   }
 }
 
+class _ForgettingCurveIntroduction extends StatelessWidget {
+  const _ForgettingCurveIntroduction();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return Card(
+      margin: const EdgeInsets.only(top: 8),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Image.asset(
+              'assets/images/herecalling diagram.png',
+              width: double.infinity,
+              fit: BoxFit.cover,
+              semanticLabel: 'Diagram of the Ebbinghaus forgetting curve',
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 17),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'The forgetting curve: Hermann Ebbinghaus',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'The forgetting curve describes how newly learned information can fade when it is not reviewed. Recalling it again at gradually increasing intervals strengthens the memory and helps slow that decline. Recalie uses this spaced-review technique to schedule each memory set when another recall is useful.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    height: 1.45,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ProfilePictureButton extends StatelessWidget {
-  const _ProfilePictureButton();
+  const _ProfilePictureButton({required this.onPressed});
+
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final photoBytes = RecalieProfileScope.of(context).photoBytes;
     return Semantics(
       button: true,
       label: 'Profile',
       child: InkWell(
         key: const Key('profileButton'),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile settings are coming soon.')),
-          );
-        },
+        onTap: onPressed,
         borderRadius: BorderRadius.circular(24),
         child: CircleAvatar(
           radius: 22,
           backgroundColor: colors.primary.withValues(alpha: 0.16),
-          child: Icon(Icons.person_rounded, color: colors.primary),
+          foregroundImage: photoBytes == null ? null : MemoryImage(photoBytes),
+          child: photoBytes == null
+              ? Icon(Icons.person_rounded, color: colors.primary)
+              : null,
         ),
       ),
     );
@@ -300,10 +490,12 @@ class _ProfilePictureButton extends StatelessWidget {
 class _TopActionCapsule extends StatelessWidget {
   const _TopActionCapsule({
     required this.isDark,
+    required this.onPremiumPressed,
     required this.onSettingsPressed,
   });
 
   final bool isDark;
+  final VoidCallback onPremiumPressed;
   final VoidCallback onSettingsPressed;
 
   @override
@@ -324,11 +516,7 @@ class _TopActionCapsule extends StatelessWidget {
           IconButton(
             key: const Key('premiumButton'),
             tooltip: 'Premium',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Premium is coming soon.')),
-              );
-            },
+            onPressed: onPremiumPressed,
             icon: ShaderMask(
               blendMode: BlendMode.srcIn,
               shaderCallback: (bounds) => const LinearGradient(

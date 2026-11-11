@@ -43,3 +43,12 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Google Mobile Ads currently brings an old WorkManager/Room combination.
+    // Use a modern WorkManager release whose Room integration is compatible
+    // with optimized Android release builds.
+    implementation("androidx.work:work-runtime:2.10.5")
+    implementation("androidx.room:room-runtime:2.7.2")
+    implementation("androidx.room:room-ktx:2.7.2")
+}

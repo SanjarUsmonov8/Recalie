@@ -265,6 +265,374 @@ class AppPreferencesCompanion extends UpdateCompanion<AppPreference> {
   }
 }
 
+class $MemorySetGroupsTable extends MemorySetGroups
+    with TableInfo<$MemorySetGroupsTable, MemorySetGroup> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MemorySetGroupsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _coverImageBytesMeta = const VerificationMeta(
+    'coverImageBytes',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> coverImageBytes =
+      GeneratedColumn<Uint8List>(
+        'cover_image_bytes',
+        aliasedName,
+        true,
+        type: DriftSqlType.blob,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    coverImageBytes,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'memory_set_groups';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MemorySetGroup> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('cover_image_bytes')) {
+      context.handle(
+        _coverImageBytesMeta,
+        coverImageBytes.isAcceptableOrUnknown(
+          data['cover_image_bytes']!,
+          _coverImageBytesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MemorySetGroup map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MemorySetGroup(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      coverImageBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}cover_image_bytes'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $MemorySetGroupsTable createAlias(String alias) {
+    return $MemorySetGroupsTable(attachedDatabase, alias);
+  }
+}
+
+class MemorySetGroup extends DataClass implements Insertable<MemorySetGroup> {
+  final int id;
+  final String name;
+  final Uint8List? coverImageBytes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const MemorySetGroup({
+    required this.id,
+    required this.name,
+    this.coverImageBytes,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || coverImageBytes != null) {
+      map['cover_image_bytes'] = Variable<Uint8List>(coverImageBytes);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  MemorySetGroupsCompanion toCompanion(bool nullToAbsent) {
+    return MemorySetGroupsCompanion(
+      id: Value(id),
+      name: Value(name),
+      coverImageBytes: coverImageBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverImageBytes),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory MemorySetGroup.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MemorySetGroup(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      coverImageBytes: serializer.fromJson<Uint8List?>(json['coverImageBytes']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'coverImageBytes': serializer.toJson<Uint8List?>(coverImageBytes),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  MemorySetGroup copyWith({
+    int? id,
+    String? name,
+    Value<Uint8List?> coverImageBytes = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => MemorySetGroup(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    coverImageBytes: coverImageBytes.present
+        ? coverImageBytes.value
+        : this.coverImageBytes,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  MemorySetGroup copyWithCompanion(MemorySetGroupsCompanion data) {
+    return MemorySetGroup(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      coverImageBytes: data.coverImageBytes.present
+          ? data.coverImageBytes.value
+          : this.coverImageBytes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemorySetGroup(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('coverImageBytes: $coverImageBytes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    $driftBlobEquality.hash(coverImageBytes),
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MemorySetGroup &&
+          other.id == this.id &&
+          other.name == this.name &&
+          $driftBlobEquality.equals(
+            other.coverImageBytes,
+            this.coverImageBytes,
+          ) &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class MemorySetGroupsCompanion extends UpdateCompanion<MemorySetGroup> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<Uint8List?> coverImageBytes;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const MemorySetGroupsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.coverImageBytes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  MemorySetGroupsCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.coverImageBytes = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : name = Value(name),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<MemorySetGroup> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<Uint8List>? coverImageBytes,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (coverImageBytes != null) 'cover_image_bytes': coverImageBytes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  MemorySetGroupsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<Uint8List?>? coverImageBytes,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return MemorySetGroupsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      coverImageBytes: coverImageBytes ?? this.coverImageBytes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (coverImageBytes.present) {
+      map['cover_image_bytes'] = Variable<Uint8List>(coverImageBytes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MemorySetGroupsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('coverImageBytes: $coverImageBytes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $PictureGroupsTable extends PictureGroups
     with TableInfo<$PictureGroupsTable, PictureGroup> {
   @override
@@ -383,6 +751,20 @@ class $PictureGroupsTable extends PictureGroups
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _memorySetGroupIdMeta = const VerificationMeta(
+    'memorySetGroupId',
+  );
+  @override
+  late final GeneratedColumn<int> memorySetGroupId = GeneratedColumn<int>(
+    'memory_set_group_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES memory_set_groups (id)',
+    ),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -417,6 +799,7 @@ class $PictureGroupsTable extends PictureGroups
     coverColorStart,
     coverColorEnd,
     coverImageUrl,
+    memorySetGroupId,
     createdAt,
     updatedAt,
   ];
@@ -506,6 +889,15 @@ class $PictureGroupsTable extends PictureGroups
         ),
       );
     }
+    if (data.containsKey('memory_set_group_id')) {
+      context.handle(
+        _memorySetGroupIdMeta,
+        memorySetGroupId.isAcceptableOrUnknown(
+          data['memory_set_group_id']!,
+          _memorySetGroupIdMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -571,6 +963,10 @@ class $PictureGroupsTable extends PictureGroups
         DriftSqlType.string,
         data['${effectivePrefix}cover_image_url'],
       ),
+      memorySetGroupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}memory_set_group_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -599,6 +995,7 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
   final String? coverColorStart;
   final String? coverColorEnd;
   final String? coverImageUrl;
+  final int? memorySetGroupId;
   final DateTime createdAt;
   final DateTime updatedAt;
   const PictureGroup({
@@ -612,6 +1009,7 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
     this.coverColorStart,
     this.coverColorEnd,
     this.coverImageUrl,
+    this.memorySetGroupId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -641,6 +1039,9 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
     }
     if (!nullToAbsent || coverImageUrl != null) {
       map['cover_image_url'] = Variable<String>(coverImageUrl);
+    }
+    if (!nullToAbsent || memorySetGroupId != null) {
+      map['memory_set_group_id'] = Variable<int>(memorySetGroupId);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -673,6 +1074,9 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
       coverImageUrl: coverImageUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(coverImageUrl),
+      memorySetGroupId: memorySetGroupId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(memorySetGroupId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -694,6 +1098,7 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
       coverColorStart: serializer.fromJson<String?>(json['coverColorStart']),
       coverColorEnd: serializer.fromJson<String?>(json['coverColorEnd']),
       coverImageUrl: serializer.fromJson<String?>(json['coverImageUrl']),
+      memorySetGroupId: serializer.fromJson<int?>(json['memorySetGroupId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -712,6 +1117,7 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
       'coverColorStart': serializer.toJson<String?>(coverColorStart),
       'coverColorEnd': serializer.toJson<String?>(coverColorEnd),
       'coverImageUrl': serializer.toJson<String?>(coverImageUrl),
+      'memorySetGroupId': serializer.toJson<int?>(memorySetGroupId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -728,6 +1134,7 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
     Value<String?> coverColorStart = const Value.absent(),
     Value<String?> coverColorEnd = const Value.absent(),
     Value<String?> coverImageUrl = const Value.absent(),
+    Value<int?> memorySetGroupId = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => PictureGroup(
@@ -749,6 +1156,9 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
     coverImageUrl: coverImageUrl.present
         ? coverImageUrl.value
         : this.coverImageUrl,
+    memorySetGroupId: memorySetGroupId.present
+        ? memorySetGroupId.value
+        : this.memorySetGroupId,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -774,6 +1184,9 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
       coverImageUrl: data.coverImageUrl.present
           ? data.coverImageUrl.value
           : this.coverImageUrl,
+      memorySetGroupId: data.memorySetGroupId.present
+          ? data.memorySetGroupId.value
+          : this.memorySetGroupId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -792,6 +1205,7 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
           ..write('coverColorStart: $coverColorStart, ')
           ..write('coverColorEnd: $coverColorEnd, ')
           ..write('coverImageUrl: $coverImageUrl, ')
+          ..write('memorySetGroupId: $memorySetGroupId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -810,6 +1224,7 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
     coverColorStart,
     coverColorEnd,
     coverImageUrl,
+    memorySetGroupId,
     createdAt,
     updatedAt,
   );
@@ -827,6 +1242,7 @@ class PictureGroup extends DataClass implements Insertable<PictureGroup> {
           other.coverColorStart == this.coverColorStart &&
           other.coverColorEnd == this.coverColorEnd &&
           other.coverImageUrl == this.coverImageUrl &&
+          other.memorySetGroupId == this.memorySetGroupId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -842,6 +1258,7 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
   final Value<String?> coverColorStart;
   final Value<String?> coverColorEnd;
   final Value<String?> coverImageUrl;
+  final Value<int?> memorySetGroupId;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const PictureGroupsCompanion({
@@ -855,6 +1272,7 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
     this.coverColorStart = const Value.absent(),
     this.coverColorEnd = const Value.absent(),
     this.coverImageUrl = const Value.absent(),
+    this.memorySetGroupId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -869,6 +1287,7 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
     this.coverColorStart = const Value.absent(),
     this.coverColorEnd = const Value.absent(),
     this.coverImageUrl = const Value.absent(),
+    this.memorySetGroupId = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : name = Value(name),
@@ -885,6 +1304,7 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
     Expression<String>? coverColorStart,
     Expression<String>? coverColorEnd,
     Expression<String>? coverImageUrl,
+    Expression<int>? memorySetGroupId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -899,6 +1319,7 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
       if (coverColorStart != null) 'cover_color_start': coverColorStart,
       if (coverColorEnd != null) 'cover_color_end': coverColorEnd,
       if (coverImageUrl != null) 'cover_image_url': coverImageUrl,
+      if (memorySetGroupId != null) 'memory_set_group_id': memorySetGroupId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -915,6 +1336,7 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
     Value<String?>? coverColorStart,
     Value<String?>? coverColorEnd,
     Value<String?>? coverImageUrl,
+    Value<int?>? memorySetGroupId,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
@@ -929,6 +1351,7 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
       coverColorStart: coverColorStart ?? this.coverColorStart,
       coverColorEnd: coverColorEnd ?? this.coverColorEnd,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      memorySetGroupId: memorySetGroupId ?? this.memorySetGroupId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -967,6 +1390,9 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
     if (coverImageUrl.present) {
       map['cover_image_url'] = Variable<String>(coverImageUrl.value);
     }
+    if (memorySetGroupId.present) {
+      map['memory_set_group_id'] = Variable<int>(memorySetGroupId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -989,6 +1415,7 @@ class PictureGroupsCompanion extends UpdateCompanion<PictureGroup> {
           ..write('coverColorStart: $coverColorStart, ')
           ..write('coverColorEnd: $coverColorEnd, ')
           ..write('coverImageUrl: $coverImageUrl, ')
+          ..write('memorySetGroupId: $memorySetGroupId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2313,6 +2740,17 @@ class $ImageNotesTable extends ImageNotes
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _imageBytesMeta = const VerificationMeta(
+    'imageBytes',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> imageBytes = GeneratedColumn<Uint8List>(
+    'image_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2342,6 +2780,7 @@ class $ImageNotesTable extends ImageNotes
     normalizedX,
     normalizedY,
     content,
+    imageBytes,
     createdAt,
     updatedAt,
   ];
@@ -2398,6 +2837,12 @@ class $ImageNotesTable extends ImageNotes
     } else if (isInserting) {
       context.missing(_contentMeta);
     }
+    if (data.containsKey('image_bytes')) {
+      context.handle(
+        _imageBytesMeta,
+        imageBytes.isAcceptableOrUnknown(data['image_bytes']!, _imageBytesMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2443,6 +2888,10 @@ class $ImageNotesTable extends ImageNotes
         DriftSqlType.string,
         data['${effectivePrefix}content'],
       )!,
+      imageBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}image_bytes'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2466,6 +2915,7 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
   final double normalizedX;
   final double normalizedY;
   final String content;
+  final Uint8List? imageBytes;
   final DateTime createdAt;
   final DateTime updatedAt;
   const ImageNote({
@@ -2474,6 +2924,7 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
     required this.normalizedX,
     required this.normalizedY,
     required this.content,
+    this.imageBytes,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -2485,6 +2936,9 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
     map['normalized_x'] = Variable<double>(normalizedX);
     map['normalized_y'] = Variable<double>(normalizedY);
     map['content'] = Variable<String>(content);
+    if (!nullToAbsent || imageBytes != null) {
+      map['image_bytes'] = Variable<Uint8List>(imageBytes);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -2497,6 +2951,9 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
       normalizedX: Value(normalizedX),
       normalizedY: Value(normalizedY),
       content: Value(content),
+      imageBytes: imageBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(imageBytes),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2513,6 +2970,7 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
       normalizedX: serializer.fromJson<double>(json['normalizedX']),
       normalizedY: serializer.fromJson<double>(json['normalizedY']),
       content: serializer.fromJson<String>(json['content']),
+      imageBytes: serializer.fromJson<Uint8List?>(json['imageBytes']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2526,6 +2984,7 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
       'normalizedX': serializer.toJson<double>(normalizedX),
       'normalizedY': serializer.toJson<double>(normalizedY),
       'content': serializer.toJson<String>(content),
+      'imageBytes': serializer.toJson<Uint8List?>(imageBytes),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2537,6 +2996,7 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
     double? normalizedX,
     double? normalizedY,
     String? content,
+    Value<Uint8List?> imageBytes = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => ImageNote(
@@ -2545,6 +3005,7 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
     normalizedX: normalizedX ?? this.normalizedX,
     normalizedY: normalizedY ?? this.normalizedY,
     content: content ?? this.content,
+    imageBytes: imageBytes.present ? imageBytes.value : this.imageBytes,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -2559,6 +3020,9 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
           ? data.normalizedY.value
           : this.normalizedY,
       content: data.content.present ? data.content.value : this.content,
+      imageBytes: data.imageBytes.present
+          ? data.imageBytes.value
+          : this.imageBytes,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -2572,6 +3036,7 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
           ..write('normalizedX: $normalizedX, ')
           ..write('normalizedY: $normalizedY, ')
           ..write('content: $content, ')
+          ..write('imageBytes: $imageBytes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -2585,6 +3050,7 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
     normalizedX,
     normalizedY,
     content,
+    $driftBlobEquality.hash(imageBytes),
     createdAt,
     updatedAt,
   );
@@ -2597,6 +3063,7 @@ class ImageNote extends DataClass implements Insertable<ImageNote> {
           other.normalizedX == this.normalizedX &&
           other.normalizedY == this.normalizedY &&
           other.content == this.content &&
+          $driftBlobEquality.equals(other.imageBytes, this.imageBytes) &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -2607,6 +3074,7 @@ class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
   final Value<double> normalizedX;
   final Value<double> normalizedY;
   final Value<String> content;
+  final Value<Uint8List?> imageBytes;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   const ImageNotesCompanion({
@@ -2615,6 +3083,7 @@ class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
     this.normalizedX = const Value.absent(),
     this.normalizedY = const Value.absent(),
     this.content = const Value.absent(),
+    this.imageBytes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -2624,6 +3093,7 @@ class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
     required double normalizedX,
     required double normalizedY,
     required String content,
+    this.imageBytes = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
   }) : pictureId = Value(pictureId),
@@ -2638,6 +3108,7 @@ class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
     Expression<double>? normalizedX,
     Expression<double>? normalizedY,
     Expression<String>? content,
+    Expression<Uint8List>? imageBytes,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -2647,6 +3118,7 @@ class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
       if (normalizedX != null) 'normalized_x': normalizedX,
       if (normalizedY != null) 'normalized_y': normalizedY,
       if (content != null) 'content': content,
+      if (imageBytes != null) 'image_bytes': imageBytes,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -2658,6 +3130,7 @@ class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
     Value<double>? normalizedX,
     Value<double>? normalizedY,
     Value<String>? content,
+    Value<Uint8List?>? imageBytes,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
   }) {
@@ -2667,6 +3140,7 @@ class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
       normalizedX: normalizedX ?? this.normalizedX,
       normalizedY: normalizedY ?? this.normalizedY,
       content: content ?? this.content,
+      imageBytes: imageBytes ?? this.imageBytes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -2690,6 +3164,9 @@ class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
     if (content.present) {
       map['content'] = Variable<String>(content.value);
     }
+    if (imageBytes.present) {
+      map['image_bytes'] = Variable<Uint8List>(imageBytes.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2707,8 +3184,470 @@ class ImageNotesCompanion extends UpdateCompanion<ImageNote> {
           ..write('normalizedX: $normalizedX, ')
           ..write('normalizedY: $normalizedY, ')
           ..write('content: $content, ')
+          ..write('imageBytes: $imageBytes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GroupAttachmentsTable extends GroupAttachments
+    with TableInfo<$GroupAttachmentsTable, GroupAttachment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GroupAttachmentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _pictureGroupIdMeta = const VerificationMeta(
+    'pictureGroupId',
+  );
+  @override
+  late final GeneratedColumn<int> pictureGroupId = GeneratedColumn<int>(
+    'picture_group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES picture_groups (id)',
+    ),
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _displayNameMeta = const VerificationMeta(
+    'displayName',
+  );
+  @override
+  late final GeneratedColumn<String> displayName = GeneratedColumn<String>(
+    'display_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dataMeta = const VerificationMeta('data');
+  @override
+  late final GeneratedColumn<Uint8List> data = GeneratedColumn<Uint8List>(
+    'data',
+    aliasedName,
+    false,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    pictureGroupId,
+    type,
+    displayName,
+    data,
+    position,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'group_attachments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GroupAttachment> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('picture_group_id')) {
+      context.handle(
+        _pictureGroupIdMeta,
+        pictureGroupId.isAcceptableOrUnknown(
+          data['picture_group_id']!,
+          _pictureGroupIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_pictureGroupIdMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('display_name')) {
+      context.handle(
+        _displayNameMeta,
+        displayName.isAcceptableOrUnknown(
+          data['display_name']!,
+          _displayNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_displayNameMeta);
+    }
+    if (data.containsKey('data')) {
+      context.handle(
+        _dataMeta,
+        this.data.isAcceptableOrUnknown(data['data']!, _dataMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dataMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GroupAttachment map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GroupAttachment(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      pictureGroupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}picture_group_id'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      displayName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}display_name'],
+      )!,
+      data: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}data'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $GroupAttachmentsTable createAlias(String alias) {
+    return $GroupAttachmentsTable(attachedDatabase, alias);
+  }
+}
+
+class GroupAttachment extends DataClass implements Insertable<GroupAttachment> {
+  final int id;
+  final int pictureGroupId;
+  final String type;
+  final String displayName;
+  final Uint8List data;
+  final int position;
+  final DateTime createdAt;
+  const GroupAttachment({
+    required this.id,
+    required this.pictureGroupId,
+    required this.type,
+    required this.displayName,
+    required this.data,
+    required this.position,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['picture_group_id'] = Variable<int>(pictureGroupId);
+    map['type'] = Variable<String>(type);
+    map['display_name'] = Variable<String>(displayName);
+    map['data'] = Variable<Uint8List>(data);
+    map['position'] = Variable<int>(position);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  GroupAttachmentsCompanion toCompanion(bool nullToAbsent) {
+    return GroupAttachmentsCompanion(
+      id: Value(id),
+      pictureGroupId: Value(pictureGroupId),
+      type: Value(type),
+      displayName: Value(displayName),
+      data: Value(data),
+      position: Value(position),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory GroupAttachment.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GroupAttachment(
+      id: serializer.fromJson<int>(json['id']),
+      pictureGroupId: serializer.fromJson<int>(json['pictureGroupId']),
+      type: serializer.fromJson<String>(json['type']),
+      displayName: serializer.fromJson<String>(json['displayName']),
+      data: serializer.fromJson<Uint8List>(json['data']),
+      position: serializer.fromJson<int>(json['position']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'pictureGroupId': serializer.toJson<int>(pictureGroupId),
+      'type': serializer.toJson<String>(type),
+      'displayName': serializer.toJson<String>(displayName),
+      'data': serializer.toJson<Uint8List>(data),
+      'position': serializer.toJson<int>(position),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  GroupAttachment copyWith({
+    int? id,
+    int? pictureGroupId,
+    String? type,
+    String? displayName,
+    Uint8List? data,
+    int? position,
+    DateTime? createdAt,
+  }) => GroupAttachment(
+    id: id ?? this.id,
+    pictureGroupId: pictureGroupId ?? this.pictureGroupId,
+    type: type ?? this.type,
+    displayName: displayName ?? this.displayName,
+    data: data ?? this.data,
+    position: position ?? this.position,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  GroupAttachment copyWithCompanion(GroupAttachmentsCompanion data) {
+    return GroupAttachment(
+      id: data.id.present ? data.id.value : this.id,
+      pictureGroupId: data.pictureGroupId.present
+          ? data.pictureGroupId.value
+          : this.pictureGroupId,
+      type: data.type.present ? data.type.value : this.type,
+      displayName: data.displayName.present
+          ? data.displayName.value
+          : this.displayName,
+      data: data.data.present ? data.data.value : this.data,
+      position: data.position.present ? data.position.value : this.position,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GroupAttachment(')
+          ..write('id: $id, ')
+          ..write('pictureGroupId: $pictureGroupId, ')
+          ..write('type: $type, ')
+          ..write('displayName: $displayName, ')
+          ..write('data: $data, ')
+          ..write('position: $position, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    pictureGroupId,
+    type,
+    displayName,
+    $driftBlobEquality.hash(data),
+    position,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GroupAttachment &&
+          other.id == this.id &&
+          other.pictureGroupId == this.pictureGroupId &&
+          other.type == this.type &&
+          other.displayName == this.displayName &&
+          $driftBlobEquality.equals(other.data, this.data) &&
+          other.position == this.position &&
+          other.createdAt == this.createdAt);
+}
+
+class GroupAttachmentsCompanion extends UpdateCompanion<GroupAttachment> {
+  final Value<int> id;
+  final Value<int> pictureGroupId;
+  final Value<String> type;
+  final Value<String> displayName;
+  final Value<Uint8List> data;
+  final Value<int> position;
+  final Value<DateTime> createdAt;
+  const GroupAttachmentsCompanion({
+    this.id = const Value.absent(),
+    this.pictureGroupId = const Value.absent(),
+    this.type = const Value.absent(),
+    this.displayName = const Value.absent(),
+    this.data = const Value.absent(),
+    this.position = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  GroupAttachmentsCompanion.insert({
+    this.id = const Value.absent(),
+    required int pictureGroupId,
+    required String type,
+    required String displayName,
+    required Uint8List data,
+    this.position = const Value.absent(),
+    required DateTime createdAt,
+  }) : pictureGroupId = Value(pictureGroupId),
+       type = Value(type),
+       displayName = Value(displayName),
+       data = Value(data),
+       createdAt = Value(createdAt);
+  static Insertable<GroupAttachment> custom({
+    Expression<int>? id,
+    Expression<int>? pictureGroupId,
+    Expression<String>? type,
+    Expression<String>? displayName,
+    Expression<Uint8List>? data,
+    Expression<int>? position,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (pictureGroupId != null) 'picture_group_id': pictureGroupId,
+      if (type != null) 'type': type,
+      if (displayName != null) 'display_name': displayName,
+      if (data != null) 'data': data,
+      if (position != null) 'position': position,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  GroupAttachmentsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? pictureGroupId,
+    Value<String>? type,
+    Value<String>? displayName,
+    Value<Uint8List>? data,
+    Value<int>? position,
+    Value<DateTime>? createdAt,
+  }) {
+    return GroupAttachmentsCompanion(
+      id: id ?? this.id,
+      pictureGroupId: pictureGroupId ?? this.pictureGroupId,
+      type: type ?? this.type,
+      displayName: displayName ?? this.displayName,
+      data: data ?? this.data,
+      position: position ?? this.position,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (pictureGroupId.present) {
+      map['picture_group_id'] = Variable<int>(pictureGroupId.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (displayName.present) {
+      map['display_name'] = Variable<String>(displayName.value);
+    }
+    if (data.present) {
+      map['data'] = Variable<Uint8List>(data.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GroupAttachmentsCompanion(')
+          ..write('id: $id, ')
+          ..write('pictureGroupId: $pictureGroupId, ')
+          ..write('type: $type, ')
+          ..write('displayName: $displayName, ')
+          ..write('data: $data, ')
+          ..write('position: $position, ')
+          ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
@@ -2718,23 +3657,31 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $AppPreferencesTable appPreferences = $AppPreferencesTable(this);
+  late final $MemorySetGroupsTable memorySetGroups = $MemorySetGroupsTable(
+    this,
+  );
   late final $PictureGroupsTable pictureGroups = $PictureGroupsTable(this);
   late final $GroupPicturesTable groupPictures = $GroupPicturesTable(this);
   late final $RecallEventsTable recallEvents = $RecallEventsTable(this);
   late final $ImageAnnotationStrokesTable imageAnnotationStrokes =
       $ImageAnnotationStrokesTable(this);
   late final $ImageNotesTable imageNotes = $ImageNotesTable(this);
+  late final $GroupAttachmentsTable groupAttachments = $GroupAttachmentsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     appPreferences,
+    memorySetGroups,
     pictureGroups,
     groupPictures,
     recallEvents,
     imageAnnotationStrokes,
     imageNotes,
+    groupAttachments,
   ];
 }
 
@@ -2911,6 +3858,314 @@ typedef $$AppPreferencesTableProcessedTableManager =
       AppPreference,
       PrefetchHooks Function()
     >;
+typedef $$MemorySetGroupsTableCreateCompanionBuilder =
+    MemorySetGroupsCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<Uint8List?> coverImageBytes,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$MemorySetGroupsTableUpdateCompanionBuilder =
+    MemorySetGroupsCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<Uint8List?> coverImageBytes,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+final class $$MemorySetGroupsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $MemorySetGroupsTable, MemorySetGroup> {
+  $$MemorySetGroupsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$PictureGroupsTable, List<PictureGroup>>
+  _pictureGroupsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.pictureGroups,
+    aliasName: 'memory_set_groups__id__picture_groups__memory_set_group_id',
+  );
+
+  $$PictureGroupsTableProcessedTableManager get pictureGroupsRefs {
+    final manager = $$PictureGroupsTableTableManager(
+      $_db,
+      $_db.pictureGroups,
+    ).filter((f) => f.memorySetGroupId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pictureGroupsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$MemorySetGroupsTableFilterComposer
+    extends Composer<_$AppDatabase, $MemorySetGroupsTable> {
+  $$MemorySetGroupsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get coverImageBytes => $composableBuilder(
+    column: $table.coverImageBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> pictureGroupsRefs(
+    Expression<bool> Function($$PictureGroupsTableFilterComposer f) f,
+  ) {
+    final $$PictureGroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pictureGroups,
+      getReferencedColumn: (t) => t.memorySetGroupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PictureGroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.pictureGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$MemorySetGroupsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MemorySetGroupsTable> {
+  $$MemorySetGroupsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get coverImageBytes => $composableBuilder(
+    column: $table.coverImageBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MemorySetGroupsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MemorySetGroupsTable> {
+  $$MemorySetGroupsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get coverImageBytes => $composableBuilder(
+    column: $table.coverImageBytes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> pictureGroupsRefs<T extends Object>(
+    Expression<T> Function($$PictureGroupsTableAnnotationComposer a) f,
+  ) {
+    final $$PictureGroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pictureGroups,
+      getReferencedColumn: (t) => t.memorySetGroupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PictureGroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pictureGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$MemorySetGroupsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MemorySetGroupsTable,
+          MemorySetGroup,
+          $$MemorySetGroupsTableFilterComposer,
+          $$MemorySetGroupsTableOrderingComposer,
+          $$MemorySetGroupsTableAnnotationComposer,
+          $$MemorySetGroupsTableCreateCompanionBuilder,
+          $$MemorySetGroupsTableUpdateCompanionBuilder,
+          (MemorySetGroup, $$MemorySetGroupsTableReferences),
+          MemorySetGroup,
+          PrefetchHooks Function({bool pictureGroupsRefs})
+        > {
+  $$MemorySetGroupsTableTableManager(
+    _$AppDatabase db,
+    $MemorySetGroupsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MemorySetGroupsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MemorySetGroupsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MemorySetGroupsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<Uint8List?> coverImageBytes = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => MemorySetGroupsCompanion(
+                id: id,
+                name: name,
+                coverImageBytes: coverImageBytes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<Uint8List?> coverImageBytes = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => MemorySetGroupsCompanion.insert(
+                id: id,
+                name: name,
+                coverImageBytes: coverImageBytes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$MemorySetGroupsTable, MemorySetGroup>(table),
+                  $$MemorySetGroupsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({pictureGroupsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (pictureGroupsRefs) db.pictureGroups,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (pictureGroupsRefs)
+                    await $_getPrefetchedData<
+                      MemorySetGroup,
+                      $MemorySetGroupsTable,
+                      PictureGroup
+                    >(
+                      currentTable: table,
+                      referencedTable: $$MemorySetGroupsTableReferences
+                          ._pictureGroupsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$MemorySetGroupsTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).pictureGroupsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.memorySetGroupId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$MemorySetGroupsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MemorySetGroupsTable,
+      MemorySetGroup,
+      $$MemorySetGroupsTableFilterComposer,
+      $$MemorySetGroupsTableOrderingComposer,
+      $$MemorySetGroupsTableAnnotationComposer,
+      $$MemorySetGroupsTableCreateCompanionBuilder,
+      $$MemorySetGroupsTableUpdateCompanionBuilder,
+      (MemorySetGroup, $$MemorySetGroupsTableReferences),
+      MemorySetGroup,
+      PrefetchHooks Function({bool pictureGroupsRefs})
+    >;
 typedef $$PictureGroupsTableCreateCompanionBuilder =
     PictureGroupsCompanion Function({
       Value<int> id,
@@ -2923,6 +4178,7 @@ typedef $$PictureGroupsTableCreateCompanionBuilder =
       Value<String?> coverColorStart,
       Value<String?> coverColorEnd,
       Value<String?> coverImageUrl,
+      Value<int?> memorySetGroupId,
       required DateTime createdAt,
       required DateTime updatedAt,
     });
@@ -2938,6 +4194,7 @@ typedef $$PictureGroupsTableUpdateCompanionBuilder =
       Value<String?> coverColorStart,
       Value<String?> coverColorEnd,
       Value<String?> coverImageUrl,
+      Value<int?> memorySetGroupId,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
@@ -2949,6 +4206,25 @@ final class $$PictureGroupsTableReferences
     super.$_table,
     super.$_typedResult,
   );
+
+  static $MemorySetGroupsTable _memorySetGroupIdTable(_$AppDatabase db) =>
+      db.memorySetGroups.createAlias(
+        'picture_groups__memory_set_group_id__memory_set_groups__id',
+      );
+
+  $$MemorySetGroupsTableProcessedTableManager? get memorySetGroupId {
+    final $_column = $_itemColumn<int>('memory_set_group_id');
+    if ($_column == null) return null;
+    final manager = $$MemorySetGroupsTableTableManager(
+      $_db,
+      $_db.memorySetGroups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_memorySetGroupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 
   static MultiTypedResultKey<$GroupPicturesTable, List<GroupPicture>>
   _groupPicturesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
@@ -2981,6 +4257,26 @@ final class $$PictureGroupsTableReferences
     ).filter((f) => f.pictureGroupId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_recallEventsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$GroupAttachmentsTable, List<GroupAttachment>>
+  _groupAttachmentsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.groupAttachments,
+    aliasName: 'picture_groups__id__group_attachments__picture_group_id',
+  );
+
+  $$GroupAttachmentsTableProcessedTableManager get groupAttachmentsRefs {
+    final manager = $$GroupAttachmentsTableTableManager(
+      $_db,
+      $_db.groupAttachments,
+    ).filter((f) => f.pictureGroupId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _groupAttachmentsRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -3056,6 +4352,29 @@ class $$PictureGroupsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  $$MemorySetGroupsTableFilterComposer get memorySetGroupId {
+    final $$MemorySetGroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memorySetGroupId,
+      referencedTable: $db.memorySetGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MemorySetGroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.memorySetGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<bool> groupPicturesRefs(
     Expression<bool> Function($$GroupPicturesTableFilterComposer f) f,
   ) {
@@ -3097,6 +4416,31 @@ class $$PictureGroupsTableFilterComposer
           }) => $$RecallEventsTableFilterComposer(
             $db: $db,
             $table: $db.recallEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> groupAttachmentsRefs(
+    Expression<bool> Function($$GroupAttachmentsTableFilterComposer f) f,
+  ) {
+    final $$GroupAttachmentsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.groupAttachments,
+      getReferencedColumn: (t) => t.pictureGroupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupAttachmentsTableFilterComposer(
+            $db: $db,
+            $table: $db.groupAttachments,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -3175,6 +4519,29 @@ class $$PictureGroupsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$MemorySetGroupsTableOrderingComposer get memorySetGroupId {
+    final $$MemorySetGroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memorySetGroupId,
+      referencedTable: $db.memorySetGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MemorySetGroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.memorySetGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$PictureGroupsTableAnnotationComposer
@@ -3232,6 +4599,29 @@ class $$PictureGroupsTableAnnotationComposer
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
+  $$MemorySetGroupsTableAnnotationComposer get memorySetGroupId {
+    final $$MemorySetGroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memorySetGroupId,
+      referencedTable: $db.memorySetGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MemorySetGroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.memorySetGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<T> groupPicturesRefs<T extends Object>(
     Expression<T> Function($$GroupPicturesTableAnnotationComposer a) f,
   ) {
@@ -3281,6 +4671,31 @@ class $$PictureGroupsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> groupAttachmentsRefs<T extends Object>(
+    Expression<T> Function($$GroupAttachmentsTableAnnotationComposer a) f,
+  ) {
+    final $$GroupAttachmentsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.groupAttachments,
+      getReferencedColumn: (t) => t.pictureGroupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupAttachmentsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groupAttachments,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$PictureGroupsTableTableManager
@@ -3297,8 +4712,10 @@ class $$PictureGroupsTableTableManager
           (PictureGroup, $$PictureGroupsTableReferences),
           PictureGroup,
           PrefetchHooks Function({
+            bool memorySetGroupId,
             bool groupPicturesRefs,
             bool recallEventsRefs,
+            bool groupAttachmentsRefs,
           })
         > {
   $$PictureGroupsTableTableManager(_$AppDatabase db, $PictureGroupsTable table)
@@ -3324,6 +4741,7 @@ class $$PictureGroupsTableTableManager
                 Value<String?> coverColorStart = const Value.absent(),
                 Value<String?> coverColorEnd = const Value.absent(),
                 Value<String?> coverImageUrl = const Value.absent(),
+                Value<int?> memorySetGroupId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => PictureGroupsCompanion(
@@ -3337,6 +4755,7 @@ class $$PictureGroupsTableTableManager
                 coverColorStart: coverColorStart,
                 coverColorEnd: coverColorEnd,
                 coverImageUrl: coverImageUrl,
+                memorySetGroupId: memorySetGroupId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -3352,6 +4771,7 @@ class $$PictureGroupsTableTableManager
                 Value<String?> coverColorStart = const Value.absent(),
                 Value<String?> coverColorEnd = const Value.absent(),
                 Value<String?> coverImageUrl = const Value.absent(),
+                Value<int?> memorySetGroupId = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
               }) => PictureGroupsCompanion.insert(
@@ -3365,6 +4785,7 @@ class $$PictureGroupsTableTableManager
                 coverColorStart: coverColorStart,
                 coverColorEnd: coverColorEnd,
                 coverImageUrl: coverImageUrl,
+                memorySetGroupId: memorySetGroupId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -3377,14 +4798,53 @@ class $$PictureGroupsTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({groupPicturesRefs = false, recallEventsRefs = false}) {
+              ({
+                memorySetGroupId = false,
+                groupPicturesRefs = false,
+                recallEventsRefs = false,
+                groupAttachmentsRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (groupPicturesRefs) db.groupPictures,
                     if (recallEventsRefs) db.recallEvents,
+                    if (groupAttachmentsRefs) db.groupAttachments,
                   ],
-                  addJoins: null,
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (memorySetGroupId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.memorySetGroupId,
+                                    referencedTable:
+                                        $$PictureGroupsTableReferences
+                                            ._memorySetGroupIdTable(db),
+                                    referencedColumn:
+                                        $$PictureGroupsTableReferences
+                                            ._memorySetGroupIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
                   getPrefetchedDataCallback: (items) async {
                     return [
                       if (groupPicturesRefs)
@@ -3429,6 +4889,27 @@ class $$PictureGroupsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (groupAttachmentsRefs)
+                        await $_getPrefetchedData<
+                          PictureGroup,
+                          $PictureGroupsTable,
+                          GroupAttachment
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PictureGroupsTableReferences
+                              ._groupAttachmentsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PictureGroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).groupAttachmentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.pictureGroupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -3449,7 +4930,12 @@ typedef $$PictureGroupsTableProcessedTableManager =
       $$PictureGroupsTableUpdateCompanionBuilder,
       (PictureGroup, $$PictureGroupsTableReferences),
       PictureGroup,
-      PrefetchHooks Function({bool groupPicturesRefs, bool recallEventsRefs})
+      PrefetchHooks Function({
+        bool memorySetGroupId,
+        bool groupPicturesRefs,
+        bool recallEventsRefs,
+        bool groupAttachmentsRefs,
+      })
     >;
 typedef $$GroupPicturesTableCreateCompanionBuilder =
     GroupPicturesCompanion Function({
@@ -4698,6 +6184,7 @@ typedef $$ImageNotesTableCreateCompanionBuilder =
       required double normalizedX,
       required double normalizedY,
       required String content,
+      Value<Uint8List?> imageBytes,
       required DateTime createdAt,
       required DateTime updatedAt,
     });
@@ -4708,6 +6195,7 @@ typedef $$ImageNotesTableUpdateCompanionBuilder =
       Value<double> normalizedX,
       Value<double> normalizedY,
       Value<String> content,
+      Value<Uint8List?> imageBytes,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
     });
@@ -4761,6 +6249,11 @@ class $$ImageNotesTableFilterComposer
 
   ColumnFilters<String> get content => $composableBuilder(
     column: $table.content,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get imageBytes => $composableBuilder(
+    column: $table.imageBytes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4827,6 +6320,11 @@ class $$ImageNotesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get imageBytes => $composableBuilder(
+    column: $table.imageBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -4885,6 +6383,11 @@ class $$ImageNotesTableAnnotationComposer
 
   GeneratedColumn<String> get content =>
       $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get imageBytes => $composableBuilder(
+    column: $table.imageBytes,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -4949,6 +6452,7 @@ class $$ImageNotesTableTableManager
                 Value<double> normalizedX = const Value.absent(),
                 Value<double> normalizedY = const Value.absent(),
                 Value<String> content = const Value.absent(),
+                Value<Uint8List?> imageBytes = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
               }) => ImageNotesCompanion(
@@ -4957,6 +6461,7 @@ class $$ImageNotesTableTableManager
                 normalizedX: normalizedX,
                 normalizedY: normalizedY,
                 content: content,
+                imageBytes: imageBytes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -4967,6 +6472,7 @@ class $$ImageNotesTableTableManager
                 required double normalizedX,
                 required double normalizedY,
                 required String content,
+                Value<Uint8List?> imageBytes = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
               }) => ImageNotesCompanion.insert(
@@ -4975,6 +6481,7 @@ class $$ImageNotesTableTableManager
                 normalizedX: normalizedX,
                 normalizedY: normalizedY,
                 content: content,
+                imageBytes: imageBytes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -5045,12 +6552,375 @@ typedef $$ImageNotesTableProcessedTableManager =
       ImageNote,
       PrefetchHooks Function({bool pictureId})
     >;
+typedef $$GroupAttachmentsTableCreateCompanionBuilder =
+    GroupAttachmentsCompanion Function({
+      Value<int> id,
+      required int pictureGroupId,
+      required String type,
+      required String displayName,
+      required Uint8List data,
+      Value<int> position,
+      required DateTime createdAt,
+    });
+typedef $$GroupAttachmentsTableUpdateCompanionBuilder =
+    GroupAttachmentsCompanion Function({
+      Value<int> id,
+      Value<int> pictureGroupId,
+      Value<String> type,
+      Value<String> displayName,
+      Value<Uint8List> data,
+      Value<int> position,
+      Value<DateTime> createdAt,
+    });
+
+final class $$GroupAttachmentsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $GroupAttachmentsTable, GroupAttachment> {
+  $$GroupAttachmentsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $PictureGroupsTable _pictureGroupIdTable(_$AppDatabase db) => db
+      .pictureGroups
+      .createAlias('group_attachments__picture_group_id__picture_groups__id');
+
+  $$PictureGroupsTableProcessedTableManager get pictureGroupId {
+    final $_column = $_itemColumn<int>('picture_group_id')!;
+
+    final manager = $$PictureGroupsTableTableManager(
+      $_db,
+      $_db.pictureGroups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_pictureGroupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$GroupAttachmentsTableFilterComposer
+    extends Composer<_$AppDatabase, $GroupAttachmentsTable> {
+  $$GroupAttachmentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get data => $composableBuilder(
+    column: $table.data,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PictureGroupsTableFilterComposer get pictureGroupId {
+    final $$PictureGroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pictureGroupId,
+      referencedTable: $db.pictureGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PictureGroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.pictureGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GroupAttachmentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GroupAttachmentsTable> {
+  $$GroupAttachmentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<Uint8List> get data => $composableBuilder(
+    column: $table.data,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PictureGroupsTableOrderingComposer get pictureGroupId {
+    final $$PictureGroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pictureGroupId,
+      referencedTable: $db.pictureGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PictureGroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.pictureGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GroupAttachmentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GroupAttachmentsTable> {
+  $$GroupAttachmentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get displayName => $composableBuilder(
+    column: $table.displayName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get data =>
+      $composableBuilder(column: $table.data, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$PictureGroupsTableAnnotationComposer get pictureGroupId {
+    final $$PictureGroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pictureGroupId,
+      referencedTable: $db.pictureGroups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PictureGroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pictureGroups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GroupAttachmentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GroupAttachmentsTable,
+          GroupAttachment,
+          $$GroupAttachmentsTableFilterComposer,
+          $$GroupAttachmentsTableOrderingComposer,
+          $$GroupAttachmentsTableAnnotationComposer,
+          $$GroupAttachmentsTableCreateCompanionBuilder,
+          $$GroupAttachmentsTableUpdateCompanionBuilder,
+          (GroupAttachment, $$GroupAttachmentsTableReferences),
+          GroupAttachment,
+          PrefetchHooks Function({bool pictureGroupId})
+        > {
+  $$GroupAttachmentsTableTableManager(
+    _$AppDatabase db,
+    $GroupAttachmentsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GroupAttachmentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GroupAttachmentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GroupAttachmentsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> pictureGroupId = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> displayName = const Value.absent(),
+                Value<Uint8List> data = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => GroupAttachmentsCompanion(
+                id: id,
+                pictureGroupId: pictureGroupId,
+                type: type,
+                displayName: displayName,
+                data: data,
+                position: position,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int pictureGroupId,
+                required String type,
+                required String displayName,
+                required Uint8List data,
+                Value<int> position = const Value.absent(),
+                required DateTime createdAt,
+              }) => GroupAttachmentsCompanion.insert(
+                id: id,
+                pictureGroupId: pictureGroupId,
+                type: type,
+                displayName: displayName,
+                data: data,
+                position: position,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$GroupAttachmentsTable, GroupAttachment>(table),
+                  $$GroupAttachmentsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({pictureGroupId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (pictureGroupId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.pictureGroupId,
+                                referencedTable:
+                                    $$GroupAttachmentsTableReferences
+                                        ._pictureGroupIdTable(db),
+                                referencedColumn:
+                                    $$GroupAttachmentsTableReferences
+                                        ._pictureGroupIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$GroupAttachmentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GroupAttachmentsTable,
+      GroupAttachment,
+      $$GroupAttachmentsTableFilterComposer,
+      $$GroupAttachmentsTableOrderingComposer,
+      $$GroupAttachmentsTableAnnotationComposer,
+      $$GroupAttachmentsTableCreateCompanionBuilder,
+      $$GroupAttachmentsTableUpdateCompanionBuilder,
+      (GroupAttachment, $$GroupAttachmentsTableReferences),
+      GroupAttachment,
+      PrefetchHooks Function({bool pictureGroupId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$AppPreferencesTableTableManager get appPreferences =>
       $$AppPreferencesTableTableManager(_db, _db.appPreferences);
+  $$MemorySetGroupsTableTableManager get memorySetGroups =>
+      $$MemorySetGroupsTableTableManager(_db, _db.memorySetGroups);
   $$PictureGroupsTableTableManager get pictureGroups =>
       $$PictureGroupsTableTableManager(_db, _db.pictureGroups);
   $$GroupPicturesTableTableManager get groupPictures =>
@@ -5064,4 +6934,6 @@ class $AppDatabaseManager {
       );
   $$ImageNotesTableTableManager get imageNotes =>
       $$ImageNotesTableTableManager(_db, _db.imageNotes);
+  $$GroupAttachmentsTableTableManager get groupAttachments =>
+      $$GroupAttachmentsTableTableManager(_db, _db.groupAttachments);
 }

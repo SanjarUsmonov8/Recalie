@@ -70,6 +70,16 @@ void main() {
       await repository.addSubjectPictures(1, [
         Uint8List.fromList([5, 6, 7, 8]),
       ]);
+      await repository.addAttachments(
+        pictureGroupId: 1,
+        type: 'audio',
+        attachments: [
+          AttachmentDraft(
+            displayName: 'lesson.mp3',
+            data: Uint8List.fromList([9, 10, 11]),
+          ),
+        ],
+      );
       await repository.createPictureGroup(
         name: 'Temporary memory set',
         images: const [],
@@ -86,6 +96,10 @@ void main() {
       expect(updatedSubject?.name, 'Biology chapter');
       expect(updatedSubject?.textContent, 'Updated information');
       expect(updatedSubject?.images, hasLength(2));
+      expect(updatedSubject?.attachments, hasLength(1));
+      expect(updatedSubject?.attachments.single.type, 'audio');
+      expect(updatedSubject?.attachments.single.displayName, 'lesson.mp3');
+      expect(updatedSubject?.attachments.single.data, [9, 10, 11]);
       expect(await repository.watchPictureGroups().first, hasLength(1));
 
       final pictureId = updatedSubject!.pictures.first.id;
@@ -138,6 +152,10 @@ void main() {
         normalizedX: 0.25,
         normalizedY: 0.4,
         content: 'Remember this formula',
+        images: [
+          Uint8List.fromList([12, 13, 14]),
+          Uint8List.fromList([21, 22, 23]),
+        ],
       );
       await repository.createImageNote(
         pictureId: pictureId,
@@ -153,11 +171,37 @@ void main() {
       var savedNotes = await repository.loadImageNotes(pictureId);
       expect(savedNotes, hasLength(2));
       expect(savedNotes.first.content, 'Remember this formula');
-      await repository.updateImageNote(firstNote.id, 'Updated note');
+      expect(savedNotes.first.images, [
+        [12, 13, 14],
+        [21, 22, 23],
+      ]);
+      await repository.updateImageNote(
+        firstNote.id,
+        'Updated note',
+        images: firstNote.images,
+      );
       await repository.deleteImageNote(savedNotes.last.id);
+      await repository.updateImageNotePosition(
+        noteId: firstNote.id,
+        normalizedX: 0.6,
+        normalizedY: 0.7,
+      );
       savedNotes = await repository.loadImageNotes(pictureId);
       expect(savedNotes, hasLength(1));
       expect(savedNotes.single.content, 'Updated note');
+      expect(savedNotes.single.images, [
+        [12, 13, 14],
+        [21, 22, 23],
+      ]);
+      expect(savedNotes.single.normalizedX, 0.6);
+      expect(savedNotes.single.normalizedY, 0.7);
+
+      await repository.deletePicture(pictureGroupId: 1, pictureId: pictureId);
+      final subjectAfterPictureDeletion = await repository.getPictureGroup(1);
+      expect(subjectAfterPictureDeletion?.pictures, hasLength(1));
+      expect(subjectAfterPictureDeletion?.pictures.single.position, 1);
+      expect(await repository.loadImageAnnotations(pictureId), isEmpty);
+      expect(await repository.loadImageNotes(pictureId), isEmpty);
 
       await repository.deleteSubject(1);
       expect(await repository.watchPictureGroups().first, isEmpty);
@@ -180,17 +224,78 @@ void main() {
       textContent: 'First page\fSecond page',
       planStartDate: DateTime(now.year, now.month, now.day),
     );
-    final subject = await repository.getPictureGroup(1);
-    await repository.setPictureReviewed(subject!.pictures.single.id, true);
-    await repository.savePreference('subject_text_reviewed_1', '0,1');
-
-    expect(
-      await completeTodayIfEveryItemIsReviewed(
+    final subject = (await repository.getPictureGroup(1))!;
+    final itemKeys = reviewItemKeysFor(subject);
+    expect(itemKeys, hasLength(3));
+    for (final itemKey in itemKeys) {
+      await advanceItemReview(
         repository: repository,
-        subjectId: 1,
-      ),
-      isTrue,
-    );
+        subject: subject,
+        itemKey: itemKey,
+        now: now,
+      );
+      await advanceItemReview(
+        repository: repository,
+        subject: subject,
+        itemKey: itemKey,
+        now: now,
+      );
+    }
     expect(await repository.watchRecallEvents(1).first, hasLength(2));
+  });
+
+  test('memory set groups and cover images persist offline', () async {
+    final directory = await Directory.systemTemp.createTemp('recalie_groups_');
+    final file = File('${directory.path}/recalie.sqlite');
+    addTearDown(() => directory.delete(recursive: true));
+
+    var database = AppDatabase(NativeDatabase(file));
+    var repository = LocalRepository(database);
+    await repository.createPictureGroup(
+      name: 'Algebra basics',
+      images: const [],
+      newMemorySetGroupName: 'Mathematics',
+      newMemorySetGroupCover: Uint8List.fromList([4, 5, 6]),
+    );
+    final createdGroup = (await repository.getMemorySetGroups()).single;
+    await repository.createPictureGroup(
+      name: 'Geometry basics',
+      images: const [],
+      memorySetGroupId: createdGroup.id,
+    );
+    await database.close();
+
+    database = AppDatabase(NativeDatabase(file));
+    repository = LocalRepository(database);
+    var groups = await repository.getMemorySetGroups();
+    expect(groups, hasLength(1));
+    expect(groups.single.name, 'Mathematics');
+    expect(groups.single.coverImageBytes, [4, 5, 6]);
+    expect(groups.single.setCount, 2);
+    final sets = await repository.watchPictureGroups().first;
+    expect(
+      sets.map((set) => set.memorySetGroupId),
+      everyElement(groups.single.id),
+    );
+
+    await repository.updateMemorySetGroup(
+      groupId: groups.single.id,
+      name: 'Advanced mathematics',
+      coverImageBytes: Uint8List.fromList([7, 8, 9]),
+      replaceCover: true,
+    );
+    groups = await repository.getMemorySetGroups();
+    expect(groups.single.name, 'Advanced mathematics');
+    expect(groups.single.coverImageBytes, [7, 8, 9]);
+
+    await repository.deleteMemorySetGroup(groups.single.id);
+    expect(await repository.getMemorySetGroups(), isEmpty);
+    expect(
+      (await repository.watchPictureGroups().first).map(
+        (set) => set.memorySetGroupId,
+      ),
+      everyElement(isNull),
+    );
+    await database.close();
   });
 }
