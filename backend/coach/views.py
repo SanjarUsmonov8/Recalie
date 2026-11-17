@@ -24,7 +24,7 @@ class CoachThrottle(UserRateThrottle):
 
 
 def _requires_https(request):
-    return not settings.DEBUG and not request.is_secure()
+    return settings.AI_REQUIRE_HTTPS and not request.is_secure()
 
 
 class DeviceSessionView(APIView):
@@ -72,6 +72,11 @@ class CoachChatView(APIView):
             reply = generate_reply(
                 serializer.validated_data['message'],
                 serializer.validated_data.get('history', []),
+                image_base64=serializer.validated_data.get('image_base64', ''),
+                image_mime_type=serializer.validated_data.get(
+                    'image_mime_type',
+                    '',
+                ),
             )
         except CoachProviderError as exc:
             return Response(

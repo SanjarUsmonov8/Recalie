@@ -108,6 +108,51 @@ class _RecallOverviewCalendarState extends State<_RecallOverviewCalendar> {
   );
   late DateTime _selectedDate = dateOnly(DateTime.now());
 
+  List<SavedRecallEvent> _eventsFor(
+    SavedPictureGroup group,
+    RecallRequirement requirement,
+  ) {
+    final events = widget.recalls
+        .where(
+          (event) =>
+              event.pictureGroupId == group.id &&
+              requirement.contains(event.recalledAt),
+        )
+        .toList();
+    events.sort((left, right) => left.recalledAt.compareTo(right.recalledAt));
+    return events;
+  }
+
+  List<_WeeklySetSlot> _weeklySlots(DateTime weekStart) {
+    final monday = mondayOf(weekStart);
+    final slots = <_WeeklySetSlot>[];
+    for (final group in widget.groups) {
+      final plan = EffectiveRecallPlan(
+        group.planStartDate,
+        type: RecallPlanType.fromStorage(group.planType),
+      );
+      final requirement = plan.requirementFor(monday);
+      if (requirement == null || !requirement.isFlexibleWeek) continue;
+      final events = _eventsFor(group, requirement);
+      slots.add(
+        _WeeklySetSlot(
+          group: group,
+          requirement: requirement,
+          completedAt: events.length >= requirement.targetRecalls
+              ? dateOnly(events[requirement.targetRecalls - 1].recalledAt)
+              : null,
+        ),
+      );
+    }
+    slots.sort((left, right) {
+      final byNumber = left.group.setNumber.compareTo(right.group.setNumber);
+      return byNumber != 0
+          ? byNumber
+          : left.group.name.compareTo(right.group.name);
+    });
+    return slots;
+  }
+
   List<_DueMemorySet> _dueSets(DateTime date) {
     final result = <_DueMemorySet>[];
     for (final group in widget.groups) {
@@ -116,14 +161,8 @@ class _RecallOverviewCalendarState extends State<_RecallOverviewCalendar> {
         type: RecallPlanType.fromStorage(group.planType),
       );
       final requirement = plan.requirementFor(date);
-      if (requirement == null) continue;
-      final recalled = widget.recalls
-          .where(
-            (event) =>
-                event.pictureGroupId == group.id &&
-                requirement.contains(event.recalledAt),
-          )
-          .length;
+      if (requirement == null || requirement.isFlexibleWeek) continue;
+      final recalled = _eventsFor(group, requirement).length;
       result.add(
         _DueMemorySet(
           group: group,
@@ -131,7 +170,132 @@ class _RecallOverviewCalendarState extends State<_RecallOverviewCalendar> {
         ),
       );
     }
+
+    final today = dateOnly(DateTime.now());
+    final weekStart = mondayOf(date);
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    final weeklySlots = _weeklySlots(weekStart);
+    for (var index = 0; index < weeklySlots.length; index++) {
+      final slot = weeklySlots[index];
+      final assignedDate = weekStart.add(Duration(days: index.clamp(0, 6)));
+      final completedAt = slot.completedAt;
+      final visibleUntil =
+          completedAt ?? (today.isBefore(weekEnd) ? today : weekEnd);
+      final isUpcomingAssignment = assignedDate.isAfter(today);
+      final shouldShow = isUpcomingAssignment
+          ? sameDate(date, assignedDate)
+          : !dateOnly(date).isBefore(assignedDate) &&
+                !dateOnly(date).isAfter(visibleUntil);
+      if (!shouldShow) continue;
+      result.add(
+        _DueMemorySet(
+          group: slot.group,
+          completed: completedAt != null && sameDate(date, completedAt),
+        ),
+      );
+    }
     return result;
+  }
+
+  Widget _dayCell(BuildContext context, DateTime date) {
+    final colors = Theme.of(context).colorScheme;
+    final due = _dueSets(date);
+    final completed = due.where((item) => item.completed).length;
+    final allComplete = due.isNotEmpty && completed == due.length;
+    final selected = sameDate(date, _selectedDate);
+    final outsideMonth = date.month != _visibleMonth.month;
+    return Opacity(
+      opacity: outsideMonth ? 0.42 : 1,
+      child: InkWell(
+        onTap: () => setState(() => _selectedDate = dateOnly(date)),
+        customBorder: const CircleBorder(),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 46,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: due.isEmpty ? Colors.transparent : colors.primary,
+            border: selected
+                ? Border.all(color: colors.onSurface, width: 2)
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Opacity(
+                opacity: allComplete ? 0.24 : 1,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${date.day}',
+                      style: TextStyle(
+                        color: due.isEmpty
+                            ? colors.onSurface
+                            : colors.onPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (due.isNotEmpty)
+                      Text(
+                        '$completed/${due.length}',
+                        style: TextStyle(
+                          color: colors.onPrimary,
+                          fontSize: 9,
+                          height: 1,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (allComplete)
+                Icon(Icons.check_rounded, color: colors.onPrimary, size: 31),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _weekCell(BuildContext context, DateTime weekStart) {
+    final colors = Theme.of(context).colorScheme;
+    final slots = _weeklySlots(weekStart);
+    final completed = slots.where((slot) => slot.completedAt != null).length;
+    return Container(
+      width: 38,
+      height: 46,
+      decoration: BoxDecoration(
+        color: slots.isEmpty
+            ? colors.surfaceContainerHighest
+            : colors.primary.withValues(alpha: .16),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '${isoWeekNumber(weekStart)}',
+            style: TextStyle(
+              color: slots.isEmpty ? colors.onSurfaceVariant : colors.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          if (slots.isNotEmpty)
+            Text(
+              '$completed/${slots.length}',
+              style: TextStyle(
+                color: colors.primary,
+                fontSize: 8,
+                height: 1,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   void _changeMonth(int offset) {
@@ -155,6 +319,9 @@ class _RecallOverviewCalendarState extends State<_RecallOverviewCalendar> {
       gridEnd.difference(gridStart).inDays + 1,
       (index) => gridStart.add(Duration(days: index)),
     );
+    final weeks = <DateTime>[
+      for (var index = 0; index < dates.length; index += 7) dates[index],
+    ];
     final selectedSets = _dueSets(_selectedDate);
     return Card(
       margin: EdgeInsets.zero,
@@ -190,6 +357,7 @@ class _RecallOverviewCalendarState extends State<_RecallOverviewCalendar> {
             const SizedBox(height: 12),
             Row(
               children: [
+                const SizedBox(width: 42),
                 for (final day in ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
                   Expanded(
                     child: Center(
@@ -202,83 +370,22 @@ class _RecallOverviewCalendarState extends State<_RecallOverviewCalendar> {
               ],
             ),
             const SizedBox(height: 6),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: dates.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 7,
-                childAspectRatio: 0.86,
-                crossAxisSpacing: 2,
-                mainAxisSpacing: 3,
-              ),
-              itemBuilder: (context, index) {
-                final date = dates[index];
-                final due = _dueSets(date);
-                final completed = due.where((item) => item.completed).length;
-                final allComplete = due.isNotEmpty && completed == due.length;
-                final selected = sameDate(date, _selectedDate);
-                final outsideMonth = date.month != _visibleMonth.month;
-                return Opacity(
-                  opacity: outsideMonth ? 0.42 : 1,
-                  child: InkWell(
-                    onTap: () => setState(() => _selectedDate = dateOnly(date)),
-                    customBorder: const CircleBorder(),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: due.isEmpty
-                            ? Colors.transparent
-                            : colors.primary,
-                        border: selected
-                            ? Border.all(color: colors.onSurface, width: 2)
-                            : null,
-                      ),
-                      alignment: Alignment.center,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Opacity(
-                            opacity: allComplete ? 0.24 : 1,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  '${date.day}',
-                                  style: TextStyle(
-                                    color: due.isEmpty
-                                        ? colors.onSurface
-                                        : colors.onPrimary,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                if (due.isNotEmpty)
-                                  Text(
-                                    '$completed/${due.length}',
-                                    style: TextStyle(
-                                      color: colors.onPrimary,
-                                      fontSize: 9,
-                                      height: 1,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          if (allComplete)
-                            Icon(
-                              Icons.check_rounded,
-                              color: colors.onPrimary,
-                              size: 31,
-                            ),
-                        ],
+            for (var weekIndex = 0; weekIndex < weeks.length; weekIndex++) ...[
+              Row(
+                children: [
+                  _weekCell(context, weeks[weekIndex]),
+                  const SizedBox(width: 4),
+                  for (var dayIndex = 0; dayIndex < 7; dayIndex++)
+                    Expanded(
+                      child: _dayCell(
+                        context,
+                        weeks[weekIndex].add(Duration(days: dayIndex)),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
+                ],
+              ),
+              if (weekIndex != weeks.length - 1) const SizedBox(height: 3),
+            ],
             if (selectedSets.isNotEmpty) ...[
               const SizedBox(height: 14),
               Text(
@@ -324,6 +431,18 @@ class _DueMemorySet {
 
   final SavedPictureGroup group;
   final bool completed;
+}
+
+class _WeeklySetSlot {
+  const _WeeklySetSlot({
+    required this.group,
+    required this.requirement,
+    required this.completedAt,
+  });
+
+  final SavedPictureGroup group;
+  final RecallRequirement requirement;
+  final DateTime? completedAt;
 }
 
 String _monthYearLabel(DateTime date) {

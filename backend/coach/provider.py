@@ -27,7 +27,13 @@ class CoachProviderError(Exception):
     pass
 
 
-def generate_reply(message, history=None):
+def generate_reply(
+    message,
+    history=None,
+    *,
+    image_base64='',
+    image_mime_type='',
+):
     api_key = settings.GEMINI_API_KEY
     if not api_key:
         raise CoachProviderError('The AI Coach is not configured yet.')
@@ -44,7 +50,18 @@ def generate_reply(message, history=None):
                 'parts': [{'text': item['content']}],
             }
         )
-    contents.append({'role': 'user', 'parts': [{'text': message}]})
+    user_parts = []
+    if image_base64:
+        user_parts.append(
+            {
+                'inline_data': {
+                    'mime_type': image_mime_type,
+                    'data': image_base64,
+                }
+            }
+        )
+    user_parts.append({'text': message})
+    contents.append({'role': 'user', 'parts': user_parts})
 
     payload = {
         'system_instruction': {'parts': [{'text': SYSTEM_INSTRUCTION}]},

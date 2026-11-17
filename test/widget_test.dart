@@ -1,10 +1,13 @@
 import 'package:drift/native.dart';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:recalie/data/local/app_database.dart';
 import 'package:recalie/features/discover/catalog_api.dart';
+import 'package:recalie/features/ai/image_ai_overlay.dart';
 import 'package:recalie/main.dart';
 
 final _catalogApiClient = CatalogApiClient(
@@ -44,11 +47,29 @@ void main() {
 
     await tester.tap(find.byKey(const Key('recalieNavAi')));
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('AI Coach'), findsOneWidget);
+    expect(find.text('Recalie AI Coach'), findsOneWidget);
+    expect(find.byKey(const ValueKey('aiComposer')), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     await database.close();
+  });
+
+  testWidgets('image AI workspace renders its prompt controls', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ImageAiOverlay(
+            imageBytes: Uint8List.fromList(const [0xFF, 0xD8, 0xFF, 0xD9]),
+            onClose: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Ask about this image'), findsWidgets);
+    expect(find.byTooltip('Attach current image'), findsOneWidget);
+    expect(find.byTooltip('Send'), findsOneWidget);
   });
 
   testWidgets('settings page changes the app theme', (tester) async {

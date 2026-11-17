@@ -6,7 +6,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:recalie/data/local/app_database.dart';
 import 'package:recalie/data/local/local_repository.dart';
 import 'package:recalie/features/ads/recalie_native_ad.dart';
-import 'package:recalie/features/ai/ai_coach_panel.dart';
+import 'package:recalie/features/ai/ai_coach_experience.dart';
 import 'package:recalie/features/discover/catalog_api.dart';
 import 'package:recalie/features/discover/discover_subjects.dart';
 import 'package:recalie/features/photo_groups/photo_groups.dart';
@@ -230,11 +230,20 @@ class RecalieShell extends StatefulWidget {
 
 class _RecalieShellState extends State<RecalieShell> {
   int _selectedIndex = 0;
+  int _previousIndex = 0;
+  late final RecalieAiController _aiController;
 
   @override
   void initState() {
     super.initState();
+    _aiController = RecalieAiController();
     _restoreSelectedTab();
+  }
+
+  @override
+  void dispose() {
+    _aiController.dispose();
+    super.dispose();
   }
 
   Future<void> _restoreSelectedTab() async {
@@ -244,11 +253,19 @@ class _RecalieShellState extends State<RecalieShell> {
     if (!mounted || savedIndex == null || savedIndex < 0 || savedIndex > 2) {
       return;
     }
-    setState(() => _selectedIndex = savedIndex);
+    setState(() {
+      _selectedIndex = savedIndex;
+      if (savedIndex != 2) _previousIndex = savedIndex;
+    });
   }
 
   Future<void> _selectTab(int index) async {
-    setState(() => _selectedIndex = index);
+    setState(() {
+      if (index == 2 && _selectedIndex != 2) {
+        _previousIndex = _selectedIndex;
+      }
+      _selectedIndex = index;
+    });
     await widget.localRepository.savePreference('selected_tab', '$index');
   }
 
@@ -314,33 +331,67 @@ class _RecalieShellState extends State<RecalieShell> {
           ],
         ),
       ),
-      RecaliePage(
-        title: 'AI Coach',
-        onProfilePressed: _openProfile,
-        themeMode: widget.themeMode,
-        onThemeChanged: widget.onThemeChanged,
-        lowerContent: const AiCoachPanel(),
+      RecalieAiCoachPage(
+        controller: _aiController,
+        onBack: () => _selectTab(_previousIndex),
+        onPremium: () => openPlansPage(context),
+        onSettings: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => SettingsPage(
+              themeMode: widget.themeMode,
+              onThemeChanged: widget.onThemeChanged,
+            ),
+          ),
+        ),
       ),
     ];
 
-    return Scaffold(
-      extendBody: true,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: IndexedStack(index: _selectedIndex, children: pages),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: RecalieNavigationBar(
-              currentIndex: _selectedIndex,
-              onChanged: _selectTab,
-              onAddPressed: _addMemorySet,
+    return PopScope(
+      canPop: _selectedIndex != 2,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _selectedIndex == 2) {
+          _selectTab(_previousIndex);
+        }
+      },
+      child: Scaffold(
+        extendBody: true,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: IndexedStack(index: _selectedIndex, children: pages),
             ),
-          ),
-        ],
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 320),
+                reverseDuration: const Duration(milliseconds: 260),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: .94, end: 1).animate(animation),
+                    alignment: Alignment.bottomCenter,
+                    child: child,
+                  ),
+                ),
+                child: _selectedIndex == 2
+                    ? RecalieAiComposer(
+                        key: const ValueKey('aiComposer'),
+                        controller: _aiController,
+                      )
+                    : RecalieNavigationBar(
+                        key: const ValueKey('mainNavigation'),
+                        currentIndex: _selectedIndex,
+                        onChanged: _selectTab,
+                        onAddPressed: _addMemorySet,
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

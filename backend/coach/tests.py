@@ -33,7 +33,7 @@ class CoachProviderTests(SimpleTestCase):
         self.assertEqual(sent_request.get_header('X-goog-api-key'), 'test-key')
 
 
-@override_settings(DEBUG=True)
+@override_settings(DEBUG=True, AI_REQUIRE_HTTPS=False)
 class CoachApiTests(APITestCase):
     def setUp(self):
         self.raw_token = 'test-device-token'
@@ -65,3 +65,16 @@ class CoachApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+
+    def test_chat_rejects_invalid_image_data(self):
+        response = self.client.post(
+            reverse('coach-chat'),
+            {
+                'message': 'Explain this image.',
+                'image_base64': 'not-base64',
+                'image_mime_type': 'image/jpeg',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)

@@ -9,6 +9,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:recalie/data/local/local_repository.dart';
 import 'package:recalie/features/ads/recalie_native_ad.dart';
+import 'package:recalie/features/ai/image_ai_overlay.dart';
 import 'package:recalie/features/photo_groups/memory_set_style.dart';
 import 'package:recalie/features/photo_groups/set_group_assignment.dart';
 import 'package:recalie/features/plans/plan_access.dart';
@@ -1800,8 +1801,11 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
   final List<List<_ImageStroke>> _undoHistory = [];
   final List<List<_ImageStroke>> _redoHistory = [];
   bool _controlsVisible = true;
+  bool _imageAiMode = false;
   SavedPictureGroup? _subject;
   RecallItemProgress? _reviewProgress;
+
+  double get _drawingBottomInset => _tool == _AnnotationTool.zoom ? 154 : 292;
 
   @override
   void initState() {
@@ -1899,7 +1903,7 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
   }
 
   void _handleDoubleTap(int index, TapDownDetails details) {
-    if (_drawingMode || _coverMode || _noteMode) return;
+    if (_coverMode || _noteMode) return;
     final controller = _transformControllerFor(index);
     if (controller.value.getMaxScaleOnAxis() > 1.01) {
       controller.value = Matrix4.identity();
@@ -1922,7 +1926,7 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
   }
 
   void _startStroke(int index, Offset point, Size size) {
-    if (!_drawingMode) return;
+    if (!_drawingMode || _tool == _AnnotationTool.zoom) return;
     if (_showToolPreview) {
       setState(() => _showToolPreview = false);
     }
@@ -1948,7 +1952,7 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
   }
 
   void _extendStroke(int index, Offset point, Size size) {
-    if (!_drawingMode) return;
+    if (!_drawingMode || _tool == _AnnotationTool.zoom) return;
     if (_tool == _AnnotationTool.eraser) {
       _eraseAt(index, point, size);
       return;
@@ -1970,7 +1974,11 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
   }
 
   void _finishStroke(int index) {
-    if (!_drawingMode || _tool == _AnnotationTool.eraser) return;
+    if (!_drawingMode ||
+        _tool == _AnnotationTool.eraser ||
+        _tool == _AnnotationTool.zoom) {
+      return;
+    }
     final pictureId = _pictures[index].id;
     final strokes = _strokes[pictureId];
     if (strokes == null || strokes.isEmpty) return;
@@ -2464,7 +2472,7 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
       } else if (tool == _AnnotationTool.pen) {
         _opacity = 0.95;
         _thickness = 5;
-      } else {
+      } else if (tool == _AnnotationTool.eraser) {
         _opacity = 1;
         _thickness = 14;
       }
@@ -2487,7 +2495,7 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
   }
 
   void _toggleControls() {
-    if (_drawingMode || _coverMode || _noteMode) return;
+    if (_drawingMode || _coverMode || _noteMode || _imageAiMode) return;
     setState(() => _controlsVisible = !_controlsVisible);
   }
 
@@ -2572,10 +2580,19 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
     });
   }
 
-  void _openFutureAiTools() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('AI image tools are coming later.')),
-    );
+  void _openImageAi() {
+    setState(() {
+      _imageAiMode = true;
+      _controlsVisible = false;
+    });
+  }
+
+  void _closeImageAi() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _imageAiMode = false;
+      _controlsVisible = true;
+    });
   }
 
   @override
@@ -2594,11 +2611,25 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          Positioned.fill(
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: _drawingMode
+                ? _drawingBottomInset
+                : _imageAiMode
+                ? MediaQuery.sizeOf(context).height * .55
+                : 0,
             child: PageView.builder(
               controller: _controller,
               physics:
-                  _drawingMode || _coverMode || _noteMode || _currentImageZoomed
+                  _drawingMode ||
+                      _coverMode ||
+                      _noteMode ||
+                      _imageAiMode ||
+                      _currentImageZoomed
                   ? const NeverScrollableScrollPhysics()
                   : const PageScrollPhysics(),
               onPageChanged: (index) {
@@ -2630,31 +2661,36 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                       minScale: 1,
                       maxScale: 5,
                       panEnabled:
-                          !_drawingMode &&
+                          (!_drawingMode || _tool == _AnnotationTool.zoom) &&
                           !_coverMode &&
                           !_noteMode &&
                           _transformControllerFor(
                                 index,
                               ).value.getMaxScaleOnAxis() >
                               1.01,
-                      scaleEnabled: !_drawingMode && !_coverMode && !_noteMode,
+                      scaleEnabled:
+                          !_coverMode &&
+                          !_noteMode &&
+                          (!_drawingMode || _tool == _AnnotationTool.zoom),
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onPanStart: !_drawingMode
+                        onPanStart:
+                            !_drawingMode || _tool == _AnnotationTool.zoom
                             ? null
                             : (details) => _startStroke(
                                 index,
                                 details.localPosition,
                                 canvasSize,
                               ),
-                        onPanUpdate: !_drawingMode
+                        onPanUpdate:
+                            !_drawingMode || _tool == _AnnotationTool.zoom
                             ? null
                             : (details) => _extendStroke(
                                 index,
                                 details.localPosition,
                                 canvasSize,
                               ),
-                        onPanEnd: !_drawingMode
+                        onPanEnd: !_drawingMode || _tool == _AnnotationTool.zoom
                             ? null
                             : (_) => _finishStroke(index),
                         child: SizedBox(
@@ -2663,7 +2699,10 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              Center(
+                              Align(
+                                alignment: _drawingMode
+                                    ? Alignment.bottomCenter
+                                    : Alignment.center,
                                 child: Hero(
                                   tag: 'memory-image-${_pictures[index].id}',
                                   child: Image.memory(
@@ -2720,7 +2759,18 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
               ),
             ),
           ),
-          if (_controlsVisible)
+          if (_imageAiMode)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: MediaQuery.sizeOf(context).height * .42,
+              bottom: 0,
+              child: ImageAiOverlay(
+                imageBytes: _pictures[_currentIndex].bytes,
+                onClose: _closeImageAi,
+              ),
+            ),
+          if (_controlsVisible && !_imageAiMode)
             Positioned(
               top: MediaQuery.paddingOf(context).top + 8,
               left: 12,
@@ -2811,8 +2861,12 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                 ],
               ),
             ),
-          if (_drawingMode && _showToolPreview)
-            Positioned.fill(
+          if (_drawingMode && _showToolPreview && _tool != _AnnotationTool.zoom)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: _drawingBottomInset,
               child: IgnorePointer(
                 child: Center(
                   child: _DrawingPreview(
@@ -2874,7 +2928,7 @@ class _MemoryImageViewerState extends State<_MemoryImageViewer> {
                 controller: _thumbnailController,
                 onImageSelected: _showImageAt,
                 onDelete: _deleteCurrentPicture,
-                onAi: _openFutureAiTools,
+                onAi: _openImageAi,
               ),
             ),
         ],
@@ -3687,7 +3741,7 @@ double _distanceSquaredToSegment(Offset point, Offset start, Offset end) {
   return (point - nearest).distanceSquared;
 }
 
-enum _AnnotationTool { pen, highlighter, eraser }
+enum _AnnotationTool { pen, highlighter, eraser, zoom }
 
 enum _EraserMode { line, area }
 
@@ -3873,6 +3927,12 @@ class _DrawingToolbar extends StatelessWidget {
                     icon: const _EraserToolIcon(),
                     onTap: () => onToolChanged(_AnnotationTool.eraser),
                   ),
+                  _DrawingChoice(
+                    tooltip: 'Move and zoom',
+                    selected: tool == _AnnotationTool.zoom,
+                    icon: const Icon(Icons.pinch_rounded),
+                    onTap: () => onToolChanged(_AnnotationTool.zoom),
+                  ),
                 ],
               ),
             ),
@@ -3898,39 +3958,51 @@ class _DrawingToolbar extends StatelessWidget {
                       Expanded(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: tool == _AnnotationTool.eraser
-                              ? [
-                                  _LineChoice(
-                                    tooltip: 'Erase whole line',
-                                    selected: eraserMode == _EraserMode.line,
-                                    icon: Icons.show_chart_rounded,
-                                    onTap: () =>
-                                        onEraserModeChanged(_EraserMode.line),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  _LineChoice(
-                                    tooltip: 'Erase area',
-                                    selected: eraserMode == _EraserMode.area,
-                                    icon: Icons.blur_circular_rounded,
-                                    onTap: () =>
-                                        onEraserModeChanged(_EraserMode.area),
-                                  ),
-                                ]
-                              : [
-                                  _LineChoice(
-                                    tooltip: 'Curved line',
-                                    selected: !straightLine,
-                                    icon: Icons.gesture_rounded,
-                                    onTap: () => onStraightChanged(false),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  _LineChoice(
-                                    tooltip: 'Straight line',
-                                    selected: straightLine,
-                                    icon: Icons.horizontal_rule_rounded,
-                                    onTap: () => onStraightChanged(true),
-                                  ),
-                                ],
+                          children: switch (tool) {
+                            _AnnotationTool.eraser => [
+                              _LineChoice(
+                                tooltip: 'Erase whole line',
+                                selected: eraserMode == _EraserMode.line,
+                                icon: Icons.show_chart_rounded,
+                                onTap: () =>
+                                    onEraserModeChanged(_EraserMode.line),
+                              ),
+                              const SizedBox(width: 10),
+                              _LineChoice(
+                                tooltip: 'Erase area',
+                                selected: eraserMode == _EraserMode.area,
+                                icon: Icons.blur_circular_rounded,
+                                onTap: () =>
+                                    onEraserModeChanged(_EraserMode.area),
+                              ),
+                            ],
+                            _AnnotationTool.zoom => const [
+                              Icon(Icons.pinch_rounded, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'Pinch or double-tap',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                            _ => [
+                              _LineChoice(
+                                tooltip: 'Curved line',
+                                selected: !straightLine,
+                                icon: Icons.gesture_rounded,
+                                onTap: () => onStraightChanged(false),
+                              ),
+                              const SizedBox(width: 10),
+                              _LineChoice(
+                                tooltip: 'Straight line',
+                                selected: straightLine,
+                                icon: Icons.horizontal_rule_rounded,
+                                onTap: () => onStraightChanged(true),
+                              ),
+                            ],
+                          },
                         ),
                       ),
                       IconButton(
@@ -3942,46 +4014,48 @@ class _DrawingToolbar extends StatelessWidget {
                       ),
                     ],
                   ),
-                  _ToolbarSlider(
-                    label: 'Thickness',
-                    value: thickness,
-                    min: 1,
-                    max: 20,
-                    onChanged: onThicknessChanged,
-                  ),
-                  _ToolbarSlider(
-                    label: 'Opacity',
-                    value: opacity,
-                    min: 0.1,
-                    max: 1,
-                    onChanged: onOpacityChanged,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      for (final option in _colors)
-                        GestureDetector(
-                          onTap: () => onColorChanged(option),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            width: 31,
-                            height: 31,
-                            decoration: BoxDecoration(
-                              color: option,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: color.toARGB32() == option.toARGB32()
-                                    ? memoryNumberCircleColor
-                                    : Colors.white54,
-                                width: color.toARGB32() == option.toARGB32()
-                                    ? 3
-                                    : 1,
+                  if (tool != _AnnotationTool.zoom) ...[
+                    _ToolbarSlider(
+                      label: 'Thickness',
+                      value: thickness,
+                      min: 1,
+                      max: 20,
+                      onChanged: onThicknessChanged,
+                    ),
+                    _ToolbarSlider(
+                      label: 'Opacity',
+                      value: opacity,
+                      min: 0.1,
+                      max: 1,
+                      onChanged: onOpacityChanged,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        for (final option in _colors)
+                          GestureDetector(
+                            onTap: () => onColorChanged(option),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              width: 31,
+                              height: 31,
+                              decoration: BoxDecoration(
+                                color: option,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: color.toARGB32() == option.toARGB32()
+                                      ? memoryNumberCircleColor
+                                      : Colors.white54,
+                                  width: color.toARGB32() == option.toARGB32()
+                                      ? 3
+                                      : 1,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
